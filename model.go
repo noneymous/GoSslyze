@@ -97,7 +97,7 @@ type CommandResults struct {
 		IsSupported bool `json:"supports_early_data"`
 	} `json:"tls_1_3_early_data"`
 
-	OpensslCcs *struct {
+	OpenSslCcs *struct {
 		IsVulnerable bool `json:"is_vulnerable_to_ccs_injection"`
 	} `json:"openssl_ccs_injection"`
 
@@ -247,7 +247,7 @@ type AcceptedCipher struct {
 
 type Cipher struct {
 	Name        string `json:"name"`
-	OpensslName string `json:"openssl_name"`
+	OpenSslName string `json:"openssl_name"`
 	IsAnonymous bool   `json:"is_anonymous"`
 	KeySize     int    `json:"key_size"`
 }
@@ -335,7 +335,7 @@ type ExpectedCtHeader struct {
 }
 
 // Helper struct, because SSLyze (or Cryptography to be more precise) converts the time into UTC and removes the time
-// zone information. Therefore golang can no longer parse the input automatically -.-
+// zone information. Therefore golang can no longer parse the input automatically..
 const timeFormat = "2006-01-02T15:04:05"
 
 type UtcTime struct {
