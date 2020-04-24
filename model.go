@@ -1,134 +1,189 @@
 package gosslyze
 
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
+// Outermost structures
 type HostResult struct {
-	Targets        []Target      `json:"accepted_targets"`
-	InvalidTargets []interface{} `json:"invalid_targets"`
-	Url            string        `json:"sslyze_url"`
-	Version        string        `json:"sslyze_version"`
-	TotalScanTime  string        `json:"total_scan_time"`
+	InvalidTargets []ConnectivityError `json:"server_connectivity_errors"`
+	Targets        []Target            `json:"server_scan_results"`
+	Url            string              `json:"sslyze_url"`
+	Version        string              `json:"sslyze_version"`
+	TotalScanTime  float64             `json:"total_scan_time"`
+}
+
+type ConnectivityError struct {
+	Error  error  `json:"error_message"`
+	Server string `json:"server_string"`
 }
 
 type Target struct {
-	CommandResults CommandResults `json:"commands_results"`
-	ServerInfo     ServerInfo     `json:"server_info"`
+	ScanCommands   []string                `json:"scan_commands"`
+	CommandErrors  map[string]CommandError `json:"scan_commands_errors"`          // The key is the name of the module
+	ExtraArguments ExtraArguments          `json:"scan_commands_extra_arguments"` // Currently only certificate info https://github.com/nabla-c0d3/sslyze/blob/74ff239543c1e3208b347942f4470631d89a1c27/sslyze/scanner.py
+	CommandResults CommandResults          `json:"scan_commands_results"`
+	ServerInfo     ServerInfo              `json:"server_info"`
 }
+
+type CommandError struct {
+	Trace  string `json:"exception_trace"`
+	Reason string `json:"reason"`
+}
+
+type ExtraArguments struct {
+	Certificate *CertificateExtraArguments `json:"certificate_info"`
+}
+
+type CertificateExtraArguments struct {
+	CustomCaFile string `json:"custom_ca_file"`
+}
+
+// Server information
 
 type ServerInfo struct {
-	ClientAuthCred        *string     `json:"client_auth_credentials"`
-	ClientAuthReq         string      `json:"client_auth_requirement"`
-	HighVer               interface{} `json:"highest_ssl_version_supported"`
-	Hostname              string      `json:"hostname"`
-	HttpTunnelingSettings interface{} `json:"http_tunneling_settings"`
-	Ip                    string      `json:"ip_address"`
-	SupportedCipher       string      `json:"openssl_cipher_string_supported"`
-	Port                  int         `json:"port"`
-	Sni                   string      `json:"tls_server_name_indication"`
-	WrappedProtocol       string      `json:"tls_wrapped_protocol"`
-	XmppToHostname        interface{} `json:"xmpp_to_hostname"`
+	NetworkConfig  NetworkConfig  `json:"network_configuration"`
+	ServerLocation ServerLocation `json:"server_location"`
+	Probing        Probing        `json:"tls_probing_result"`
 }
 
+type NetworkConfig struct {
+	NetworkMaxRetries       int                    `json:"network_max_retries"`
+	NetworkTimeout          int                    `json:"network_timeout"`
+	ClientAuthCredentials   *ClientAuthCredentials `json:"tls_client_auth_credentials"`
+	OpportunisticEncryption *int                   `json:"tls_opportunistic_encryption"`
+	Sni                     string                 `json:"tls_server_name_indication"`
+	XmppToHostname          *string                `json:"xmpp_to_hostname"`
+}
+
+type ClientAuthCredentials struct {
+	CertificateChainPath string `json:"certificate_chain_path"`
+	KeyPath              string `json:"key_path"`
+	KeyPassword          string `json:"key_password"`
+	KeyType              int    `json:"key_type"`
+}
+
+type ServerLocation struct {
+	Hostname string `json:"hostname"`
+	Ip       string `json:"ip_address"`
+	Port     int    `json:"port"`
+}
+
+type Probing struct {
+	SupportedCipher            string `json:"cipher_suite_supported"`
+	ClientAuthRequirement      string `json:"client_auth_requirement"`
+	HighestTlsVersionSupported string `json:"highest_tls_version_supported"`
+}
+
+// Command results
+
 type CommandResults struct {
-	CertInfo CertInfo `json:"certinfo"`
+	CertInfo *CertInfo `json:"certificate_info"`
 
-	Compression struct {
-		CompressionName *string `json:"compression_name"`
-	} `json:"compression"`
+	SslV2   *Protocol `json:"ssl_2_0_cipher_suites"`
+	SslV3   *Protocol `json:"ssl_3_0_cipher_suites"`
+	TlsV1_0 *Protocol `json:"tls_1_0_cipher_suites"`
+	TlsV1_1 *Protocol `json:"tls_1_1_cipher_suites"`
+	TlsV1_2 *Protocol `json:"tls_1_2_cipher_suites"`
+	TlsV1_3 *Protocol `json:"tls_1_3_cipher_suites"`
 
-	EarlyData struct {
-		IsSupported bool `json:"is_early_data_supported"`
-	} `json:"early_data"`
+	Compression *struct {
+		CompressionName bool `json:"supports_compression"`
+	} `json:"tls_compression"`
 
-	Fallback struct {
+	EarlyData *struct {
+		IsSupported bool `json:"supports_early_data"`
+	} `json:"tls_1_3_early_data"`
+
+	OpensslCcs *struct {
+		IsVulnerable bool `json:"is_vulnerable_to_ccs_injection"`
+	} `json:"openssl_ccs_injection"`
+
+	Fallback *struct {
 		FallbackScsv bool `json:"supports_fallback_scsv"`
-	} `json:"fallback"`
+	} `json:"tls_fallback_scsv"`
 
-	Heartbleed struct {
+	Heartbleed *struct {
 		IsVulnerable bool `json:"is_vulnerable_to_heartbleed"`
 	} `json:"heartbleed"`
 
-	OpensslCcs struct {
-		IsVulnerable bool `json:"is_vulnerable_to_ccs_injection"`
-	} `json:"openssl_ccs"`
-
-	Renegotiation struct {
-		AcceptsClientRenegotiation  bool `json:"accepts_client_renegotiation"`
-		SupportsSecureRenegotiation bool `json:"supports_secure_renegotiation"`
-	} `json:"reneg"`
-
-	Resum struct {
-		RateResult struct {
-			ServerInfo   ServerInfo  `json:"server_info"`
-			ScanCommand  interface{} `json:"scan_command"`
-			NbAttempted  int         `json:"attempted_resumptions_nb"` // Should be 100
-			NbSuccessful int         `json:"successful_resumptions_nb"`
-			NbFailed     int         `json:"failed_resumptions_nb"`
-			ErroredList  []string    `json:"errored_resumptions_list"`
-		} `json:"_rate_result"`
-		NbAttempted        int      `json:"attempted_resumptions_nb"`
-		NbSuccessful       int      `json:"successful_resumptions_nb"`
-		NbFailed           int      `json:"failed_resumptions_nb"`
-		ErroredList        []string `json:"errored_resumptions_list"`
-		IsTicketSupported  bool     `json:"is_ticket_resumption_supported"`
-		TicketFailedReason *string  `json:"ticket_resumption_failed_reason"`
-		TicketError        *string  `json:"ticket_resumption_exception"`
-	} `json:"resum"`
-
-	Robot struct {
-		RobotEnum string `json:"robot_result_enum"`
+	Robot *struct {
+		RobotEnum string `json:"robot_result"`
 	} `json:"robot"`
 
-	SslV3   Protocol `json:"sslv3"`
-	SslV2   Protocol `json:"sslv2"`
-	TlsV1   Protocol `json:"tlsv1"`
-	TlsV1_1 Protocol `json:"tlsv1_1"`
-	TlsV1_2 Protocol `json:"tlsv1_2"`
-	TlsV1_3 Protocol `json:"tlsv1_3"`
+	HttpHeaders *HttpHeaders `json:"http_headers"`
+
+	Renegotiation  *Renegotiation  `json:"session_renegotiation"`
+	Resumption     *Resumption     `json:"session_resumption"`
+	ResumptionRate *ResumptionRate `json:"session_resumption_rate"`
 }
 
-type Protocol struct {
-	AcceptedCipherList []Cipher `json:"accepted_cipher_list"`
-	ErrorCipherList    []Cipher `json:"errored_cipher_list"`
-	PreferredCipher    *Cipher  `json:"preferred_cipher"`
-	RejectedCipherList []Cipher `json:"rejected_cipher_list"`
-}
-
-type Cipher struct {
-	IsAnonymous           bool   `json:"is_anonymous"`
-	KeySize               int    `json:"key_size"`
-	OpenSslName           string `json:"openssl_name"`
-	PostHandshakeResponse string `json:"post_handshake_response"`
-	SslVer                string `json:"ssl_version"`
-}
+// Certificate Information
 
 type CertInfo struct {
-	StapleExtension       bool             `json:"leaf_certificate_has_must_staple_extension"`
-	IsLeafEv              bool             `json:"leaf_certificate_is_ev"`
-	SctsCount             int              `json:"leaf_certificate_signed_certificate_timestamps_count"`
-	MatchHostname         bool             `json:"leaf_certificate_subject_matches_hostname"`
-	OcspResponse          interface{}      `json:"ocsp_response"`
-	OcspIsTrusted         interface{}      `json:"ocsp_response_is_trusted"`
-	OcspResponseStatus    interface{}      `json:"ocsp_response_status"`
-	PathValidationErrList []interface{}    `json:"path_validation_error_list"`
-	PathValidationList    []CertPathResult `json:"path_validation_result_list"`
-	CertificateChain      []Certificate    `json:"received_certificate_chain"`
-	HasAnchor             bool             `json:"received_chain_contains_anchor_certificate"`
-	IsChainValid          bool             `json:"received_chain_has_valid_order"`
-	VerifiedCertChain     []Certificate    `json:"verified_certificate_chain"`
-	SymantecDistrust      bool             `json:"verified_chain_has_legacy_symantec_anchor"`
-	HasSha1               bool             `json:"verified_chain_has_sha1_signature"`
+	HostnameUsed string       `json:"hostname_used_for_server_name_indication"`
+	Deployments  []Deployment `json:"certificate_deployments"`
+}
+
+type Deployment struct {
+	StapleExtension  bool             `json:"leaf_certificate_has_must_staple_extension"`
+	IsLeafEv         bool             `json:"leaf_certificate_is_ev"`
+	MatchHostname    bool             `json:"leaf_certificate_subject_matches_hostname"`
+	SctsCount        *int             `json:"leaf_certificate_signed_certificate_timestamps_count"`
+	OcspResponse     *OscpResponse    `json:"ocsp_response"`
+	OcspIsTrusted    *bool            `json:"ocsp_response_is_trusted"`
+	PathValidation   []PathValidation `json:"path_validation_results"`
+	CertificateChain []Certificate    `json:"received_certificate_chain"`
+	HasAnchor        *bool            `json:"received_chain_contains_anchor_certificate"`
+	IsChainValid     bool             `json:"received_chain_has_valid_order"`
+	SymantecDistrust *bool            `json:"verified_chain_has_legacy_symantec_anchor"`
+	HasSha1          *bool            `json:"verified_chain_has_sha1_signature"`
+}
+
+type PathValidation struct {
+	TrustStore    TrustStore     `json:"trust_store"`
+	VerifiedChain *[]Certificate `json:"verified_certificate_chain"`
+	OpenSslError  *string        `json:"openssl_error_string"`
+	// This is not actually part of the json result, because it's a method.
+	// ValidationSuccessful bool         `json:"was_validation_successful"`
+	//
+	// ValidationSuccessful: len(VerifiedChain) > 0
 }
 
 type Certificate struct {
 	Pem            string      `json:"as_pem"`
 	HpkpPin        string      `json:"hpkp_pin"`
-	Issuer         string      `json:"issuer"`
-	NotAfter       string      `json:"notAfter"`
+	Issuer         Entity      `json:"issuer"`
+	NotAfter       UtcTime     `json:"notAfter"`
 	NotBefore      string      `json:"notBefore"`
 	PublicKey      PublicKey   `json:"publicKey"`
 	Serial         string      `json:"serialNumber"`
 	SignatureAlg   string      `json:"signatureAlgorithm"`
-	Subject        string      `json:"subject"`
+	Subject        Entity      `json:"subject"`
 	SubjectAltName SubjAltName `json:"subjectAlternativeName"`
+}
+
+type Entity struct {
+	Attributes   []Attribute `json:"attributes"`
+	ParsingError *string     `json:"parsing_error"`
+	Dn           *string     `json:"rfc4514_string"`
+}
+
+type Attribute struct {
+	Oid   Oid     `json:"oid"`
+	Dn    *string `json:"rfc4514_string"`
+	Value *string `json:"value"`
+}
+
+type Oid struct {
+	DotNotation string `json:"dotted_string"`
+	Name        string `json:"name"`
+}
+
+type SubjAltName struct {
+	Dns []string `json:"DNS"`
 }
 
 type PublicKey struct {
@@ -138,19 +193,167 @@ type PublicKey struct {
 	Size      string `json:"size"`
 }
 
-type SubjAltName struct {
-	Dns []string `json:"DNS"`
-}
-
-type CertPathResult struct {
-	IsTrusted    bool       `json:"is_certificate_trusted"`
-	TrustStore   TrustStore `json:"trust_store"`
-	VerifyString string     `json:"verify_string"`
-}
-
 type TrustStore struct {
-	EvOids  []string `json:"ev_oids"`
-	Name    string   `json:"name"`
-	Path    string   `json:"path"`
-	Version string   `json:"version"`
+	Path    string `json:"path"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	EvOids  *[]Oid `json:"ev_oids"`
+}
+
+type OscpResponse struct {
+	Status            string         `json:"status"`
+	Type              string         `json:"type"`
+	Version           int            `json:"version"`
+	ResponderId       string         `json:"responder_id"`
+	ProducedAt        UtcTime        `json:"produced_at"`
+	CertificateStatus string         `json:"certificate_status"`
+	ThisUpdate        UtcTime        `json:"this_update"`
+	NextUpdate        UtcTime        `json:"next_update"`
+	HashAlgorithm     string         `json:"hash_algorithm"`
+	IssuerNameHash    string         `json:"issuer_name_hash"`
+	IssuerKeyHash     string         `json:"issuer_key_hash"`
+	SerialNumber      string         `json:"serial_number"`
+	Extensions        []SctExtension `json:"extensions"` // Currently only SignedCertificateTimestampsExtension
+}
+
+type SctExtension struct {
+	Scts []SignedCertificateTimestamp
+}
+
+type SignedCertificateTimestamp struct {
+	Version string  `json:"version"`
+	LogId   string  `json:"log_id"`
+	Time    UtcTime `json:"timestamp"`
+}
+
+// Cipher Suites
+
+type Protocol struct {
+	AcceptedCiphers []AcceptedCipher `json:"accepted_cipher_suites"`
+	TlsVersion      string           `json:"tls_version_used"`
+	PreferredCipher *AcceptedCipher  `json:"cipher_suite_preferred_by_server"`
+	RejectedCiphers []RejectedCipher `json:"rejected_cipher_suites"`
+}
+
+type RejectedCipher struct {
+	Cipher Cipher `json:"cipher_suite"`
+	Error  string `json:"error_message"`
+}
+
+type AcceptedCipher struct {
+	Cipher       Cipher            `json:"cipher_suite"`
+	EphemeralKey *EphemeralKeyInfo `json:"ephemeral_key"`
+}
+
+type Cipher struct {
+	Name        string `json:"name"`
+	OpensslName string `json:"openssl_name"`
+	IsAnonymous bool   `json:"is_anonymous"`
+	KeySize     int    `json:"key_size"`
+}
+
+type EphemeralKeyInfo interface{}
+
+type BaseEphemeralKeyInfo struct {
+	EphemeralKeyInfo
+	Type        int    `json:"type"`
+	TypeName    string `json:"type_name"`
+	Size        int    `json:"size"`
+	PublicBytes []byte `json:"public_bytes"`
+}
+
+type EcDhKeyInfo struct {
+	BaseEphemeralKeyInfo
+	Curve     int    `json:"curve"`
+	CurveName string `json:"curve_name"`
+}
+
+type NistEcDhKeyInfo struct {
+	EcDhKeyInfo
+	X []byte `json:"x"`
+	Y []byte `json:"y"`
+}
+
+type DhEphemeralKeyInfo struct {
+	BaseEphemeralKeyInfo
+	Prime     []byte `json:"prime"`
+	Generator []byte `json:"generator"`
+}
+
+// Session renegotiation & resumption
+
+type Renegotiation struct {
+	AcceptsClientRenegotiation  bool `json:"accepts_client_renegotiation"`
+	SupportsSecureRenegotiation bool `json:"supports_secure_renegotiation"`
+}
+
+type Resumption struct {
+	AttemptedIdResumptions  int    `json:"attempted_session_id_resumptions_count"`
+	SuccessfulIdResumptions int    `json:"successful_session_id_resumptions_count"`
+	TicketResumption        string `json:"tls_ticket_resumption_result"`
+	// These two are not actually part of the json result, because they're methods.
+	// TicketResumptionSupported *bool `json:"is_tls_ticket_resumption_supported"`
+	// IdResumptionSupported *bool `json:"is_session_id_resumption_supported"`
+	//
+	// TicketResumptionSupported: (TicketResumption == TicketResumptionSuccess)
+	// IdResumptionSupported: (AttemptedIdResumptions == SuccessfulIdResumptions)
+
+}
+
+type ResumptionRate struct {
+	AttemptedIdResumptions  int `json:"attempted_session_id_resumptions_count"`
+	SuccessfulIdResumptions int `json:"successful_session_id_resumptions_count"`
+}
+
+// Vulnerabilities & weaknesses
+
+type HttpHeaders struct {
+	Hsts           *HstsHeader       `json:"strict_transport_security_header"`
+	Hpkp           *HpkpHeader       `json:"public_key_pins_header"`
+	HpkpReportOnly *HpkpHeader       `json:"public_key_pins_report_only_header"`
+	ExpectedCt     *ExpectedCtHeader `json:"expect_ct_header"`
+}
+
+type HstsHeader struct {
+	Preload           bool `json:"preload"`
+	IncludeSubdomains bool `json:"include_subdomains"`
+	MaxAge            *int `json:"max_age"`
+}
+
+type HpkpHeader struct {
+	Sha256Pins        []string `json:"sha256_pins"`
+	IncludeSubdomains bool     `json:"include_subdomains"`
+	MaxAge            *int     `json:"max_age"`
+	ReportUri         *string  `json:"report_uri"`
+	ReportTo          *string  `json:"report_to"`
+}
+
+type ExpectedCtHeader struct {
+	Enforce   bool    `json:"enforce"`
+	MaxAge    *int    `json:"max_age"`
+	ReportUri *string `json:"report_uri"`
+}
+
+// Helper struct, because SSLyze (or Cryptography to be more precise) converts the time into UTC and removes the time
+// zone information. Therefore golang can no longer parse the input automatically -.-
+const timeFormat = "2006-01-02T15:04:05"
+
+type UtcTime struct {
+	Value time.Time
+}
+
+func (ut *UtcTime) UnmarshalJSON(input []byte) error {
+	t, errParse := time.Parse(timeFormat, strings.Trim(string(input), `"`))
+	if errParse != nil {
+		return errParse
+	}
+
+	ut.Value = t
+	return nil
+}
+
+func (ut *UtcTime) MarshalJSON() ([]byte, error) {
+	//do your serializing here
+	stamp := fmt.Sprintf("\"%s\"", time.Time(ut.Value).Format(timeFormat))
+	return []byte(stamp), nil
 }

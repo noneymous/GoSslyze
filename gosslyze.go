@@ -10,49 +10,6 @@ import (
 	"strings"
 )
 
-/*
-func sample(){
-
-	// Initialize command depending on whether to use the Windows executable or SSLyze as a Python module
-	var command string
-	var args []string
-	if runtime.GOOS == "windows" {
-		command = "./bin/sslyze.exe" // Use Windows binary
-		args = []string{}
-	} else {
-		command = "python3.5" // Use SSLyze as a Python module
-		args = []string{"-m", "sslyze"}
-	}
-
-	// Create new scanner
-	s := NewScanner(command, args...)
-
-	// Set the target
-	s.WithTarget("localhost", 443)
-
-	// Set scanner flags
-	s.WithSslV3()
-	s.WithSslV2()
-	s.WithTlsV1()
-	s.WithTlsV1_1()
-	s.WithTlsV1_2()
-	s.WithTlsV1_3()
-	s.WithCcs()
-	s.WithHeartbleed()
-	s.WithRenegotiation()
-	s.WithResume()
-	s.WithCompression()
-	s.WithFallback()
-	s.WithRobot()
-	s.WithCertInfo() 		// Validate certificate
-	s.WithSni("localhost")  // Specify the hostname to connect to using sni.
-	s.WithEarlyData()
-
-	// Launch
-	s.Run()
-}
-*/
-
 type Scanner struct {
 	ctx    context.Context // Context
 	path   string          // Binary path
@@ -240,7 +197,25 @@ func (s *Scanner) WithCertInfo() {
 // WithCaFile sets the path to a local trust store file (with root certificates in PEM format) to verify the
 // validity of the server(s) certificate's chain(s) against.
 func (s *Scanner) WithCaFile(path string) {
-	s.args = append(s.args, fmt.Sprintf("--ca_file=%s", path))
+	s.args = append(s.args, fmt.Sprintf("--certinfo_ca_file=%s", path))
+}
+
+// WithClientCert sets the client certificate chain for authentication. The certificates must be in PEM format and must
+// be sorted starting with the subject's client certificate, followed by intermediate CA certificates if applicable.
+// Additionally the path of the client's private key file is set, as it is needed for client authentication as well.
+func (s *Scanner) WithClientCert(chainPath string, keyPath string) {
+	s.args = append(s.args, fmt.Sprintf("--chainPath=%s", chainPath))
+	s.args = append(s.args, fmt.Sprintf("--key=%s", keyPath))
+}
+
+// WithClientKeyFormat sets the format of the client's private key file. either "DER" or "PEM" (default)
+func (s *Scanner) WithClientKeyFormat(format string) {
+	s.args = append(s.args, fmt.Sprintf("--keyform=%s", format))
+}
+
+// WithClientKeyPass sets the passphrase of the client's private key.
+func (s *Scanner) WithClientKeyPass(pass string) {
+	s.args = append(s.args, fmt.Sprintf("--pass=%s", pass))
 }
 
 // WithSslV2 list the SSL 2.0 OpenSSL ciphers suites.
@@ -271,16 +246,6 @@ func (s *Scanner) WithTlsV1_2() {
 // WithTlsV1_3 list the tls 1.3 OpenSSL ciphers suites.
 func (s *Scanner) WithTlsV1_3() {
 	s.args = append(s.args, "--tlsv1_3")
-}
-
-// WithHttpGet will send a http get request for each cipher after completing the handshake and return the status code.
-func (s *Scanner) WithHttpGet() {
-	s.args = append(s.args, "--http_get")
-}
-
-// WithHideRejectedCiphers will not display the usually long list of cipher suites, that were rejected.
-func (s *Scanner) WithHideRejectedCiphers() {
-	s.args = append(s.args, "--hide_rejected_ciphers")
 }
 
 // Parse converts SSLyze json output to internal data structure
