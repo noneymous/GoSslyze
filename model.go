@@ -157,7 +157,7 @@ type Certificate struct {
 	HpkpPin        string      `json:"hpkp_pin"`
 	Issuer         Entity      `json:"issuer"`
 	NotAfter       UtcTime     `json:"notAfter"`
-	NotBefore      string      `json:"notBefore"`
+	NotBefore      UtcTime     `json:"notBefore"`
 	PublicKey      PublicKey   `json:"publicKey"`
 	Serial         string      `json:"serialNumber"`
 	SignatureAlg   string      `json:"signatureAlgorithm"`
@@ -166,15 +166,15 @@ type Certificate struct {
 }
 
 type Entity struct {
-	Attributes   []Attribute `json:"attributes"`
-	ParsingError *string     `json:"parsing_error"`
-	Dn           *string     `json:"rfc4514_string"`
+	Attributes   *[]Attribute `json:"attributes"`     // Empty if Parsing error is set
+	RfcString    *string      `json:"rfc4514_string"` // Empty if Parsing error is set
+	ParsingError *string      `json:"parsing_error"`
 }
 
 type Attribute struct {
-	Oid   Oid     `json:"oid"`
-	Dn    *string `json:"rfc4514_string"`
-	Value *string `json:"value"`
+	Oid       Oid     `json:"oid"`
+	RfcString string `json:"rfc4514_string"`
+	Value     string `json:"value"`
 }
 
 type Oid struct {
@@ -254,7 +254,7 @@ type Cipher struct {
 
 type EphemeralKeyInfo interface{}
 
-type BaseEphemeralKeyInfo struct {
+type BaseKeyInfo struct {
 	EphemeralKeyInfo
 	Type        int    `json:"type"`
 	TypeName    string `json:"type_name"`
@@ -263,7 +263,7 @@ type BaseEphemeralKeyInfo struct {
 }
 
 type EcDhKeyInfo struct {
-	BaseEphemeralKeyInfo
+	BaseKeyInfo
 	Curve     int    `json:"curve"`
 	CurveName string `json:"curve_name"`
 }
@@ -274,8 +274,8 @@ type NistEcDhKeyInfo struct {
 	Y []byte `json:"y"`
 }
 
-type DhEphemeralKeyInfo struct {
-	BaseEphemeralKeyInfo
+type DhKeyInfo struct {
+	BaseKeyInfo
 	Prime     []byte `json:"prime"`
 	Generator []byte `json:"generator"`
 }
@@ -339,7 +339,8 @@ type ExpectedCtHeader struct {
 const timeFormat = "2006-01-02T15:04:05"
 
 type UtcTime struct {
-	Value time.Time
+	String string
+	Time   time.Time
 }
 
 func (ut *UtcTime) UnmarshalJSON(input []byte) error {
@@ -348,12 +349,12 @@ func (ut *UtcTime) UnmarshalJSON(input []byte) error {
 		return errParse
 	}
 
-	ut.Value = t
+	ut.String = string(input)
+	ut.Time = t
 	return nil
 }
 
 func (ut *UtcTime) MarshalJSON() ([]byte, error) {
-	//do your serializing here
-	stamp := fmt.Sprintf("\"%s\"", time.Time(ut.Value).Format(timeFormat))
+	stamp := fmt.Sprintf("\"%s\"", ut.Time.Format(timeFormat))
 	return []byte(stamp), nil
 }
