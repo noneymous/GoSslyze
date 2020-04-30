@@ -90,7 +90,7 @@ type CommandResults struct {
 	TlsV1_3 *Protocol `json:"tls_1_3_cipher_suites"`
 
 	Compression *struct {
-		CompressionName bool `json:"supports_compression"`
+		IsSupported bool `json:"supports_compression"`
 	} `json:"tls_compression"`
 
 	EarlyData *struct {
@@ -172,6 +172,7 @@ type Entity struct {
 }
 
 type Attribute struct {
+	// All OIDs: https://cryptography.io/en/latest/_modules/cryptography/x509/oid/
 	Oid       Oid     `json:"oid"`
 	RfcString string `json:"rfc4514_string"`
 	Value     string `json:"value"`
