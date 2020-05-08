@@ -1,7 +1,10 @@
 package gosslyze
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -16,7 +19,7 @@ type HostResult struct {
 }
 
 type ConnectivityError struct {
-	Error  error  `json:"error_message"`
+	Error  string `json:"error_message"`
 	Server string `json:"server_string"`
 }
 
@@ -173,7 +176,7 @@ type Entity struct {
 
 type Attribute struct {
 	// All OIDs: https://cryptography.io/en/latest/_modules/cryptography/x509/oid/
-	Oid       Oid     `json:"oid"`
+	Oid       Oid    `json:"oid"`
 	RfcString string `json:"rfc4514_string"`
 	Value     string `json:"value"`
 }
@@ -242,8 +245,8 @@ type RejectedCipher struct {
 }
 
 type AcceptedCipher struct {
-	Cipher       Cipher            `json:"cipher_suite"`
-	EphemeralKey *EphemeralKeyInfo `json:"ephemeral_key"`
+	Cipher       Cipher           `json:"cipher_suite"`
+	EphemeralKey EphemeralKeyInfo `json:"ephemeral_key"` // Optional!, but it's an interface
 }
 
 type Cipher struct {
@@ -279,6 +282,105 @@ type DhKeyInfo struct {
 	BaseKeyInfo
 	Prime     []byte `json:"prime"`
 	Generator []byte `json:"generator"`
+}
+
+// fieldsMatch checks for the existence of all the 'keys' in the map. The map also needs to have no other keys aside
+// from the provided ones.
+func fieldsMatch(m map[string]*json.RawMessage, keys ...string) bool {
+	if len(m) != len(keys) {
+		return false
+	}
+
+	for _, k := range keys {
+		if _, ok := m[k]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
+	// First, deserialize everything into a map of map
+	var rawMap map[string]*json.RawMessage
+	errUnmar := json.Unmarshal(data, &rawMap)
+	if errUnmar != nil {
+		return errUnmar
+	}
+
+	// Handle the cipher suite first
+	rawCipherData, ok := rawMap["cipher_suite"]
+	if !ok {
+		return errors.New("cipher_suite field missing in AcceptedCipher")
+	}
+
+	c.Cipher = Cipher{}
+	errUnmar = json.Unmarshal(*rawCipherData, &c.Cipher)
+	if errUnmar != nil {
+		return errUnmar
+	}
+
+	// Handle the the ephemeral key info
+	rawKeyData, ok := rawMap["ephemeral_key"]
+	if !ok {
+		c.EphemeralKey = nil
+		return nil
+	}
+	var rawKeyInfo map[string]*json.RawMessage
+	errUnmar = json.Unmarshal(*rawKeyData, &rawKeyInfo)
+	if errUnmar != nil {
+		return errUnmar
+	}
+
+	// See what fields exist in order to determine the concrete struct we want to unmarshal to.
+	// BaseKeyInfo
+	if fieldsMatch(rawKeyInfo, "type", "type_name", "size", "public_bytes") {
+		base := &BaseKeyInfo{}
+		errUnmar := json.Unmarshal(*rawKeyData, base)
+		if errUnmar != nil {
+			return errUnmar
+		}
+		c.EphemeralKey = base
+		return nil
+	}
+	// EcDhKeyInfo
+	if fieldsMatch(rawKeyInfo, "type", "type_name", "size", "public_bytes", "curve", "curve_name") {
+		ecdh := &EcDhKeyInfo{}
+		errUnmar := json.Unmarshal(*rawKeyData, ecdh)
+		if errUnmar != nil {
+			return errUnmar
+		}
+		c.EphemeralKey = ecdh
+		return nil
+	}
+	// NistEcDhKeyInfo
+	if fieldsMatch(rawKeyInfo, "type", "type_name", "size", "public_bytes", "curve", "curve_name", "x", "y") {
+		nist := &NistEcDhKeyInfo{}
+		errUnmar := json.Unmarshal(*rawKeyData, nist)
+		if errUnmar != nil {
+			return errUnmar
+		}
+		fmt.Println(*nist)
+		c.EphemeralKey = nist
+		return nil
+	}
+	// DhKeyInfo
+	if fieldsMatch(rawKeyInfo, "type", "type_name", "size", "public_bytes", "prime", "generator") {
+		dh := &DhKeyInfo{}
+		errUnmar := json.Unmarshal(*rawKeyData, dh)
+		if errUnmar != nil {
+			return errUnmar
+		}
+		c.EphemeralKey = dh
+		return nil
+	}
+
+	// Create a new unmarshal error as we could not find a matching type.
+	var e EphemeralKeyInfo
+	return &json.UnmarshalTypeError{
+		Value: string(data),
+		Type:  reflect.TypeOf(e),
+	}
 }
 
 // Session renegotiation & resumption
@@ -344,13 +446,13 @@ type UtcTime struct {
 	Time   time.Time
 }
 
-func (ut *UtcTime) UnmarshalJSON(input []byte) error {
-	t, errParse := time.Parse(timeFormat, strings.Trim(string(input), `"`))
+func (ut *UtcTime) UnmarshalJSON(data []byte) error {
+	t, errParse := time.Parse(timeFormat, strings.Trim(string(data), `"`))
 	if errParse != nil {
 		return errParse
 	}
 
-	ut.String = string(input)
+	ut.String = string(data)
 	ut.Time = t
 	return nil
 }
