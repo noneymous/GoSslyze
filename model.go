@@ -140,7 +140,7 @@ type Deployment struct {
 	PathValidation   []PathValidation `json:"path_validation_results"`
 	CertificateChain []Certificate    `json:"received_certificate_chain"`
 	HasAnchor        *bool            `json:"received_chain_contains_anchor_certificate"`
-	IsChainValid     bool             `json:"received_chain_has_valid_order"`
+	HasValidOrder    bool             `json:"received_chain_has_valid_order"`
 	SymantecDistrust *bool            `json:"verified_chain_has_legacy_symantec_anchor"`
 	HasSha1          *bool            `json:"verified_chain_has_sha1_signature"`
 }
