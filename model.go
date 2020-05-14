@@ -313,6 +313,9 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 	if !ok {
 		return errors.New("cipher_suite field missing in AcceptedCipher")
 	}
+	if rawCipherData == nil {
+		return errors.New("cipher_suite field is nil in AcceptedCipher")
+	}
 
 	c.Cipher = Cipher{}
 	errUnmar = json.Unmarshal(*rawCipherData, &c.Cipher)
@@ -324,6 +327,9 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 	rawKeyData, ok := rawMap["ephemeral_key"]
 	if !ok {
 		c.EphemeralKey = nil
+		return nil
+	}
+	if rawKeyData == nil {
 		return nil
 	}
 	var rawKeyInfo map[string]*json.RawMessage
@@ -360,7 +366,6 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		if errUnmar != nil {
 			return errUnmar
 		}
-		fmt.Println(*nist)
 		c.EphemeralKey = nist
 		return nil
 	}

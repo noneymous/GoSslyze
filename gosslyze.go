@@ -134,6 +134,8 @@ func (s *Scanner) WithXmppTo(xmppTo string) {
 }
 
 // WithSni adds server name indication usage. Only affects tls1.0+ connections.
+// NOTE: SNI seems a bit buggy, it is neither possible to specify multiple SNI-hostnames for a single target scan nor is
+// it possible to set a SNI-hostname for one target in a multi target scan.
 func (s *Scanner) WithSni(sni string) {
 	s.args = append(s.args, fmt.Sprintf("--sni=%s", sni))
 }
