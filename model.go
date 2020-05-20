@@ -56,7 +56,7 @@ type NetworkConfig struct {
 	NetworkMaxRetries       int                    `json:"network_max_retries"`
 	NetworkTimeout          int                    `json:"network_timeout"`
 	ClientAuthCredentials   *ClientAuthCredentials `json:"tls_client_auth_credentials"`
-	OpportunisticEncryption *int                   `json:"tls_opportunistic_encryption"`
+	OpportunisticEncryption *string                `json:"tls_opportunistic_encryption"`
 	Sni                     string                 `json:"tls_server_name_indication"`
 	XmppToHostname          *string                `json:"xmpp_to_hostname"`
 }
