@@ -251,7 +251,7 @@ type AcceptedCipher struct {
 
 type Cipher struct {
 	Name        string `json:"name"`
-	OpenSslName string `json:"openssl_name"`
+	OpensslName string `json:"openssl_name"`
 	IsAnonymous bool   `json:"is_anonymous"`
 	KeySize     int    `json:"key_size"`
 }
