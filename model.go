@@ -100,7 +100,7 @@ type CommandResults struct {
 		IsSupported bool `json:"supports_early_data"`
 	} `json:"tls_1_3_early_data"`
 
-	OpenSslCcs *struct {
+	OpensslCcs *struct {
 		IsVulnerable bool `json:"is_vulnerable_to_ccs_injection"`
 	} `json:"openssl_ccs_injection"`
 
@@ -251,7 +251,7 @@ type AcceptedCipher struct {
 
 type Cipher struct {
 	Name        string `json:"name"`
-	OpenSslName string `json:"openssl_name"`
+	OpensslName string `json:"openssl_name"`
 	IsAnonymous bool   `json:"is_anonymous"`
 	KeySize     int    `json:"key_size"`
 }
