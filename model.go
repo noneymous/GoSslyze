@@ -193,8 +193,8 @@ type SubjAltName struct {
 type PublicKey struct {
 	Algorithm string `json:"algorithm"`
 	Curve     string `json:"curve"`
-	Exponent  string `json:"exponent"`
-	Size      string `json:"size"`
+	Exponent  int    `json:"exponent"`
+	Size      int    `json:"size"`
 }
 
 type TrustStore struct {
