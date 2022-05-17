@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -36,13 +37,20 @@ func NewScanner(sslyzePath string, args ...string) Scanner {
 
 func (s *Scanner) Run() (*HostResult, error) {
 	var stdout, stderr bytes.Buffer
+	// Create temporary file.
+	temp_file, err := os.CreateTemp("", "json_out")
+	if err != nil {
+		return nil, err
+	}
+	temp_file.Chmod(1700)
 
-	// Enable json output and let it be output to stdout instead of a file.
-	s.args = append(s.args, "--json_out=-")
+	// Enable json output and let it be output to temporary file.
+	s.args = append(s.args, fmt.Sprintf("--json_out=%s", temp_file.Name()))
+
+	defer os.Remove(temp_file.Name())
 
 	// Prepare the command
 	cmd := exec.Command(s.path, s.args...)
-
 	// Set output and error buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -60,26 +68,31 @@ func (s *Scanner) Run() (*HostResult, error) {
 	go func() {
 		done <- cmd.Wait()
 	}()
-
 	select {
 	case <-s.ctx.Done():
 		// Context was done before the scan was finished.
 		// The process is killed and a timeout error is returned.
 		_ = cmd.Process.Kill()
-
 		return nil, errors.New("SSLyze scan timed out")
 	case <-done:
 		// Scan finished before timeout.
-		if stderr.Len() > 0 {
-			return nil, errors.New(strings.Trim(stderr.String(), ".\n"))
+
+		// Read ouput JSON file
+		out, err := os.ReadFile(temp_file.Name())
+		if err != nil {
+			fmt.Println("Can not read JSON output file")
+			return nil, err
 		}
 
+		if stderr.Len() > 0 {
+			fmt.Println(stderr.String())
+			return nil, errors.New(strings.Trim(stderr.String(), ".\n"))
+		}
 		// Parse returned data
-		result, errParse := Parse(stdout.Bytes())
+		result, errParse := Parse(out, stdout.String())
 		if errParse != nil {
 			return nil, fmt.Errorf("unable to parse SSLyze output: %v", errParse)
 		}
-
 		return result, nil
 	}
 }
@@ -131,7 +144,7 @@ func (s *Scanner) WithHttpsTunnel(proxy string) {
 // smtp, xmpp, xmpp_server, pop3, ftp, imap, ldap, rdp, postgres, auto
 // Where auto will deduce the protocol from the supplied port number.
 func (s *Scanner) WithStartTls(prot string) {
-	s.args = append(s.args, fmt.Sprintf("--starttls=%s", prot))
+	s.args = append(s.args, fmt.Sprintf("--starttls %s", prot))
 }
 
 // WithXmppTo should be set with 'starttls xmpp'. The parameter should be the hostname that is supposed to be set in the
@@ -265,15 +278,23 @@ func (s *Scanner) WithTlsV1_3() {
 }
 
 // Parse converts SSLyze json output to internal data structure
-func Parse(content []byte) (*HostResult, error) {
-
+func Parse(json_out []byte, std_out string) (*HostResult, error) {
 	result := &HostResult{}
-
 	// Try to parse the output data to internal structure
-	errUnmarshal := json.Unmarshal(content, result)
+	errUnmarshal := json.Unmarshal(json_out, result)
+	// Parse Mozilla's config check, this behavior can be removed once the check's results are recorded in the JSON output
+	start_idx := strings.Index(std_out, "COMPLIANCE AGAINST MOZILLA TLS CONFIGURATION")
+	check_result := std_out[start_idx:]
+	result.ComplianceTestDetails = check_result
+	for i, host := range result.Targets {
+		hostname := host.ServerLocation.Hostname
+		port := host.ServerLocation.Port
+		isCompliant := strings.Index(check_result, fmt.Sprintf("%s:%d: FAILED - Not compliant", hostname, port)) == -1
+		result.Targets[i].ScanResult.IsCompliant = isCompliant
+	}
+
 	if errUnmarshal != nil {
 		return nil, errUnmarshal
 	}
-
 	return result, nil
 }

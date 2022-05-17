@@ -11,12 +11,13 @@ import (
 
 // Outermost structures
 type HostResult struct {
-	InvalidTargets     []ConnectivityError `json:"invalid_server_strings"`
-	Targets            []Target            `json:"server_scan_results"`
-	Url                string              `json:"sslyze_url"`
-	Version            string              `json:"sslyze_version"`
-	DateScansCompleted UtcTime             `json:"date_scans_completed"`
-	DateScansStarted   UtcTime             `json:"date_scans_started"`
+	InvalidTargets        []ConnectivityError `json:"invalid_server_strings"`
+	Targets               []Target            `json:"server_scan_results"`
+	Url                   string              `json:"sslyze_url"`
+	Version               string              `json:"sslyze_version"`
+	DateScansCompleted    UtcTime             `json:"date_scans_completed"`
+	DateScansStarted      UtcTime             `json:"date_scans_started"`
+	ComplianceTestDetails string              // Details of Mozilla's recommended config check
 }
 
 type ConnectivityError struct {
@@ -99,6 +100,7 @@ type StandardErrorStatus struct {
 }
 
 type CommandResults struct {
+	IsCompliant    bool            // Check if compliant against Mozilla's recommended config
 	CertInfo       *CertInfo       `json:"certificate_info"`
 	EllipticCurves *EllipticCurves `json:"elliptic_curves"`
 
