@@ -45,7 +45,7 @@ func sample(){
 	s.WithSni("localhost") // Specify the hostname to connect to using sni.
 	s.WithEarlyData()
 	s.WithEllipticCurves()
-	s.WithMozillaConfig("modern")
+	s.WithMozillaConfig("intermediate")  // Specify the recommended Mozilla's config to be check against
 
 	// Launch
 	s.Run()
