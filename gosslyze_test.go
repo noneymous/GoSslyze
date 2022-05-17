@@ -14,7 +14,7 @@ func TestSample(t *testing.T) {
 		command = "./bin/sslyze.exe" // Use Windows binary
 		args = []string{}
 	} else {
-		command = "python3.8" // Use SSLyze as a Python module
+		command = "python3.10" // Use SSLyze as a Python module
 		args = []string{"-m", "sslyze"}
 	}
 
@@ -36,7 +36,7 @@ func TestSample(t *testing.T) {
 	s.WithHeartbleed()
 	s.WithRenegotiation()
 	s.WithResume()
-	s.WithResumeRate()
+	s.WithResumeAttempts(10)
 	s.WithHttpHeaders()
 	s.WithCompression()
 	s.WithFallback()
@@ -44,6 +44,8 @@ func TestSample(t *testing.T) {
 	s.WithCertInfo()  // Validate certificate
 	s.WithSni(target) // Specify the hostname to connect to using sni.
 	s.WithEarlyData()
+	s.WithEllipticCurves()
+	s.WithMozillaConfig("intermediate")
 
 	// Launch
 	s.Run()
