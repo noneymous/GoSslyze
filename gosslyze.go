@@ -94,11 +94,18 @@ func (s *Scanner) WithContext(ctx context.Context) {
 	s.ctx = ctx
 }
 
-// WithRegular is a shortcut to add the following flags:
-// --sslv2 --sslv3 --tlsv1 --tlsv1_1 --tlsv1_2 --tlsv1_3 --reneg --resum --certinfo --http_get --hide_rejected_ciphers
-// --compression --heartbleed --openssl_ccs --fallback --robot
-func (s *Scanner) WithRegular() {
-	s.args = append(s.args, "--regular")
+// WithMozillaConfig adds a check for the server's TLS configurations against one of Mozilla's TLS
+// configuration. Available options are: "modern", "intermediate", "old" and "disable".
+// Set to "intermediate" per default. Pass "disable" to disable this check.
+func (s *Scanner) WithMozillaConfig(config string) {
+	s.args = append(s.args, fmt.Sprintf("--mozilla_config=%s", config))
+}
+
+// Update the default trust stores used by SSLyze. The latest stores will be downloaded from
+// https://github.com/nabla-c0d3/trust_stores_observatory. This option is meant to be used
+// separately, and will silence any other command line option supplied to SSLyze.
+func (s *Scanner) UpdateTrustStores() {
+	s.args = []string{"--update_trust_stores"}
 }
 
 // WithTargetsFile will read the list of targets to scan from the file defined by the 'path' parameter. The file should
@@ -124,10 +131,10 @@ func (s *Scanner) WithHttpsTunnel(proxy string) {
 // smtp, xmpp, xmpp_server, pop3, ftp, imap, ldap, rdp, postgres, auto
 // Where auto will deduce the protocol from the supplied port number.
 func (s *Scanner) WithStartTls(prot string) {
-	s.args = append(s.args, fmt.Sprintf("--starttls=%s", prot))
+	s.args = append(s.args, fmt.Sprintf("--starttls %s", prot))
 }
 
-// WithXmppTo should be set with 'starttls=xmpp'. The parameter should be the hostname that is supposed to be set in the
+// WithXmppTo should be set with 'starttls xmpp'. The parameter should be the hostname that is supposed to be set in the
 // 'to' field of the XMPP stream. Default is the server's hostname.
 func (s *Scanner) WithXmppTo(xmppTo string) {
 	s.args = append(s.args, fmt.Sprintf("--xmpp_to=%s", xmppTo))
@@ -181,14 +188,21 @@ func (s *Scanner) WithFallback() {
 	s.args = append(s.args, "--fallback")
 }
 
-// CheckResume test the server(s) for session resumption support using session IDs and TLS session tickets (RFC 5077).
+// WithEllipticCurves test the server(s) for supported elliptic curves.
+func (s *Scanner) WithEllipticCurves() {
+	s.args = append(s.args, "--elliptic_curves")
+}
+
+// WithResume tests the server(s) for session resumption support using session IDs and TLS session tickets (RFC 5077).
 func (s *Scanner) WithResume() {
 	s.args = append(s.args, "--resum")
 }
 
-// WithResumeRate test the server(s) rate of successful resumptions by performing 100 session ID resumptions.
-func (s *Scanner) WithResumeRate() {
-	s.args = append(s.args, "--resum_rate")
+// WithResumeAttempts is to be used with WithResume. Sets the number of session resumptions (both with Session IDs and TLS Tickets)
+// that SSLyze should attempt. The default value is 5, but a higher value such as 100 can be used to get a more accurate
+// measure of how often session resumption succeeds or fails with the server.
+func (s *Scanner) WithResumeAttempts(resum_attempts int) {
+	s.args = append(s.args, fmt.Sprintf("--resum_attempts=%d", resum_attempts))
 }
 
 // WithCertInfo check validity of server(s) certificate(s) against trust stores (mozzila , apple etc), check for OCSP stapling support.
@@ -206,7 +220,7 @@ func (s *Scanner) WithCaFile(path string) {
 // be sorted starting with the subject's client certificate, followed by intermediate CA certificates if applicable.
 // Additionally the path of the client's private key file is set, as it is needed for client authentication as well.
 func (s *Scanner) WithClientCert(chainPath string, keyPath string) {
-	s.args = append(s.args, fmt.Sprintf("--chainPath=%s", chainPath))
+	s.args = append(s.args, fmt.Sprintf("--cert=%s", chainPath))
 	s.args = append(s.args, fmt.Sprintf("--key=%s", keyPath))
 }
 
