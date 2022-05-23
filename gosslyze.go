@@ -36,22 +36,24 @@ func NewScanner(sslyzePath string, args ...string) Scanner {
 }
 
 func (s *Scanner) Run() (*HostResult, error) {
-	var stdout, stderr bytes.Buffer
+
 	// Create temporary file.
-	temp_file, err := os.CreateTemp("", "json_out")
+	tempFile, err := os.CreateTemp("", "json_out")
 	if err != nil {
 		return nil, err
 	}
-	temp_file.Chmod(1700)
+	tempFile.Chmod(1700)
 
 	// Enable json output and let it be output to temporary file.
-	s.args = append(s.args, fmt.Sprintf("--json_out=%s", temp_file.Name()))
+	s.args = append(s.args, fmt.Sprintf("--json_out=%s", tempFile.Name()))
 
-	defer os.Remove(temp_file.Name())
+	defer os.Remove(tempFile.Name())
 
 	// Prepare the command
 	cmd := exec.Command(s.path, s.args...)
+
 	// Set output and error buffer
+	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
@@ -68,26 +70,32 @@ func (s *Scanner) Run() (*HostResult, error) {
 	go func() {
 		done <- cmd.Wait()
 	}()
+
+	// Check if scan finished or timed out
 	select {
 	case <-s.ctx.Done():
+
 		// Context was done before the scan was finished.
 		// The process is killed and a timeout error is returned.
 		_ = cmd.Process.Kill()
 		return nil, errors.New("SSLyze scan timed out")
 	case <-done:
+
 		// Scan finished before timeout.
 
 		// Read ouput JSON file
-		out, err := os.ReadFile(temp_file.Name())
+		out, err := os.ReadFile(tempFile.Name())
 		if err != nil {
 			fmt.Println("Can not read JSON output file")
 			return nil, err
 		}
 
+		// Check if scan threw errors
 		if stderr.Len() > 0 {
 			fmt.Println(stderr.String())
 			return nil, errors.New(strings.Trim(stderr.String(), ".\n"))
 		}
+
 		// Parse returned data
 		result, errParse := Parse(out, stdout.String())
 		if errParse != nil {
@@ -280,8 +288,10 @@ func (s *Scanner) WithTlsV1_3() {
 // Parse converts SSLyze json output to internal data structure
 func Parse(json_out []byte, std_out string) (*HostResult, error) {
 	result := &HostResult{}
+
 	// Try to parse the output data to internal structure
 	errUnmarshal := json.Unmarshal(json_out, result)
+
 	// Parse Mozilla's config check, this behavior can be removed once the check's results are recorded in the JSON output
 	start_idx := strings.Index(std_out, "COMPLIANCE AGAINST MOZILLA TLS CONFIGURATION")
 	check_result := std_out[start_idx:]

@@ -20,10 +20,13 @@ type HostResult struct {
 	ComplianceTestDetails string              // Details of Mozilla's recommended config check
 }
 
+// Server errors
 type ConnectivityError struct {
 	Server string `json:"server_string"`
 	Error  string `json:"error_message"`
 }
+
+// Scan results
 
 type Target struct {
 	ConnectivityErrorTrace string         `json:"connectivity_error_trace"`
@@ -34,24 +37,6 @@ type Target struct {
 	ScanStatus             string         `json:"scan_status"`
 	ServerLocation         ServerLocation `json:"server_location"`
 	UUID                   string         `json:"uuid"`
-}
-
-type CommandError struct {
-	Trace  string `json:"exception_trace"`
-	Reason string `json:"reason"`
-}
-
-type ExtraArguments struct {
-	Certificate *CertificateExtraArguments `json:"certificate_info"`
-}
-
-type CertificateExtraArguments struct {
-	CustomCaFile string `json:"custom_ca_file"`
-}
-
-// Server information
-
-type ServerInfo struct {
 }
 
 type NetworkConfig struct {
@@ -73,9 +58,9 @@ type ClientAuthCredentials struct {
 type ServerLocation struct {
 	ConnectionType string            `json:"connection_type"`
 	Hostname       string            `json:"hostname"`
-	HttpProx       HttpProxySettings `json:"http_proxy_settings"`
 	Ip             string            `json:"ip_address"`
 	Port           int               `json:"port"`
+	HttpProx       HttpProxySettings `json:"http_proxy_settings"`
 }
 
 type HttpProxySettings struct {
@@ -93,6 +78,7 @@ type Probing struct {
 }
 
 // Command results
+
 type StandardErrorStatus struct {
 	ErrorReason string `json:"error_reason"`
 	ErrorTrace  string `json:"error_trace"`
@@ -230,6 +216,7 @@ type Entity struct {
 }
 
 type Attribute struct {
+
 	// All OIDs: https://cryptography.io/en/latest/_modules/cryptography/x509/oid/
 	Oid       Oid    `json:"oid"`
 	RfcString string `json:"rfc4514_string"`
@@ -286,6 +273,7 @@ type SignedCertificateTimestamp struct {
 }
 
 // Elliptic Curves
+
 type EllipticCurves struct {
 	StandardErrorStatus
 	Result EllipticCurveResult `json:"result"`
@@ -362,6 +350,7 @@ type DhKeyInfo struct {
 // fieldsMatch checks for the existence of all the 'keys' in the map. The map also needs to have no other keys aside
 // from the provided ones.
 func fieldsMatch(m map[string]*json.RawMessage, keys ...string) bool {
+
 	// Remove keys that have null value
 	for key, elem := range m {
 		if elem == nil {
@@ -382,12 +371,14 @@ func fieldsMatch(m map[string]*json.RawMessage, keys ...string) bool {
 }
 
 func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
+
 	// First, deserialize everything into a map of map
 	var rawMap map[string]*json.RawMessage
 	errUnmar := json.Unmarshal(data, &rawMap)
 	if errUnmar != nil {
 		return errUnmar
 	}
+
 	// Handle the cipher suite first
 	rawCipherData, ok := rawMap["cipher_suite"]
 	if !ok {
@@ -402,6 +393,7 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 	if errUnmar != nil {
 		return errUnmar
 	}
+
 	// Handle the the ephemeral key info
 	rawKeyData, ok := rawMap["ephemeral_key"]
 	if !ok {
@@ -428,6 +420,7 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		c.EphemeralKey = base
 		return nil
 	}
+
 	// EcDhKeyInfo
 	if fieldsMatch(rawKeyInfo, "type_name", "size", "public_bytes", "curve_name") {
 		ecdh := &EcDhKeyInfo{}
@@ -438,6 +431,7 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		c.EphemeralKey = ecdh
 		return nil
 	}
+
 	// NistEcDhKeyInfo
 	if fieldsMatch(rawKeyInfo, "type_name", "size", "public_bytes", "curve_name", "x", "y") {
 		nist := &NistEcDhKeyInfo{}
@@ -448,6 +442,7 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		c.EphemeralKey = nist
 		return nil
 	}
+
 	// DhKeyInfo
 	if fieldsMatch(rawKeyInfo, "type_name", "size", "public_bytes", "prime", "generator") {
 		dh := &DhKeyInfo{}
@@ -458,7 +453,7 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		c.EphemeralKey = dh
 		return nil
 	}
-	fmt.Println(rawKeyInfo)
+
 	// Create a new unmarshal error as we could not find a matching type.
 	var e EphemeralKeyInfo
 	return &json.UnmarshalTypeError{

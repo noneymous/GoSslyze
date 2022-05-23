@@ -14,7 +14,7 @@ func TestSample(t *testing.T) {
 		command = "./bin/sslyze.exe" // Use Windows binary
 		args = []string{}
 	} else {
-		command = "python3.10" // Use SSLyze as a Python module
+		command = "python3.5" // Use SSLyze as a Python module
 		args = []string{"-m", "sslyze"}
 	}
 
