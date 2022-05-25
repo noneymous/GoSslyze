@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 	"time"
@@ -177,7 +178,7 @@ type Deployment struct {
 	CertificateChain  []Certificate    `json:"received_certificate_chain"`
 	HasAnchor         *bool            `json:"received_chain_contains_anchor_certificate"`
 	HasValidOrder     bool             `json:"received_chain_has_valid_order"`
-	VerifiedCertChain *bool            `json:"verified_certificate_chain"`
+	VerifiedCertChain *[]Certificate   `json:"verified_certificate_chain"`
 	SymantecDistrust  *bool            `json:"verified_chain_has_legacy_symantec_anchor"`
 	HasSha1           *bool            `json:"verified_chain_has_sha1_signature"`
 }
@@ -197,8 +198,8 @@ type Certificate struct {
 	Issuer            Entity      `json:"issuer"`
 	NotValidAfter     UtcTime     `json:"not_valid_after"`
 	NotValidBefore    UtcTime     `json:"not_valid_before"`
-	PublicKey         PublicKey   `json:"publicKey"`
-	Serial            string      `json:"serialNumber"`
+	PublicKey         PublicKey   `json:"public_key"`
+	Serial            big.Int      `json:"serial_number"`
 	SignatureAlg      Oid         `json:"signature_algorithm_oid"`
 	SignatureHashAlgo SigHashAlgo `json:"signature_hash_algorithm"`
 	Subject           Entity      `json:"subject"`
@@ -258,7 +259,7 @@ type OscpResponse struct {
 	HashAlgorithm     string         `json:"hash_algorithm"`
 	IssuerNameHash    string         `json:"issuer_name_hash"`
 	IssuerKeyHash     string         `json:"issuer_key_hash"`
-	SerialNumber      string         `json:"serial_number"`
+	SerialNumber      big.Int         `json:"serial_number"`
 	Extensions        []SctExtension `json:"extensions"` // Currently only SignedCertificateTimestampsExtension
 }
 

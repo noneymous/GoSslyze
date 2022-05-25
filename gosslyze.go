@@ -299,11 +299,13 @@ func Parse(json_out []byte, std_out string) (*HostResult, error) {
 	for i, host := range result.Targets {
 		hostname := host.ServerLocation.Hostname
 		port := host.ServerLocation.Port
-		isCompliant := strings.Index(check_result, fmt.Sprintf("%s:%d: FAILED - Not compliant", hostname, port)) == -1
+		isCompliant := strings.Index(check_result, fmt.Sprintf("%s:%d: FAILED", hostname, port)) == -1 && strings.
+			Index(check_result, fmt.Sprintf("%s:%d: ERROR", hostname, port)) == -1
 		result.Targets[i].ScanResult.IsCompliant = isCompliant
 	}
 
 	if errUnmarshal != nil {
+		fmt.Println(errUnmarshal)
 		return nil, errUnmarshal
 	}
 	return result, nil
