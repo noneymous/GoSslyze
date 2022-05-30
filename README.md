@@ -37,12 +37,15 @@ func sample(){
 	s.WithHeartbleed()
 	s.WithRenegotiation()
 	s.WithResume()
+	s.WithResumeAttempts(10)
 	s.WithCompression()
 	s.WithFallback()
 	s.WithRobot()
-	s.WithCertInfo()        // Validate certificate
-	s.WithSni("localhost")  // Specify the hostname to connect to using sni.
+	s.WithCertInfo()       // Validate certificate
+	s.WithSni("localhost") // Specify the hostname to connect to using sni.
 	s.WithEarlyData()
+	s.WithEllipticCurves()
+	s.WithMozillaConfig("intermediate")  // Specify the recommended Mozilla's config to be check against
 
 	// Launch
 	s.Run()
