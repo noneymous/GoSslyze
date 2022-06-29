@@ -41,18 +41,17 @@ type Target struct {
 }
 
 type NetworkConfig struct {
-	NetworkMaxRetries       int                    `json:"network_max_retries"`
-	NetworkTimeout          int                    `json:"network_timeout"`
-	ClientAuthCredentials   *ClientAuthCredentials `json:"tls_client_auth_credentials"`
-	OpportunisticEncryption *string                `json:"tls_opportunistic_encryption"`
-	Sni                     string                 `json:"tls_server_name_indication"`
-	XmppToHostname          *string                `json:"xmpp_to_hostname"`
+	NetworkMaxRetries       int                   `json:"network_max_retries"`
+	NetworkTimeout          int                   `json:"network_timeout"`
+	ClientAuthCredentials   ClientAuthCredentials `json:"tls_client_auth_credentials"`
+	OpportunisticEncryption string                `json:"tls_opportunistic_encryption"`
+	Sni                     string                `json:"tls_server_name_indication"`
+	XmppToHostname          string                `json:"xmpp_to_hostname"`
 }
 
 type ClientAuthCredentials struct {
 	CertificateChainPath string `json:"certificate_chain_path"`
 	KeyPath              string `json:"key_path"`
-	KeyPassword          string `json:"key_password"`
 	KeyType              int    `json:"key_type"`
 }
 
@@ -87,9 +86,9 @@ type StandardErrorStatus struct {
 }
 
 type CommandResults struct {
-	IsCompliant    bool            // Check if compliant against Mozilla's recommended config
-	CertInfo       *CertInfo       `json:"certificate_info"`
-	EllipticCurves *EllipticCurves `json:"elliptic_curves"`
+	IsCompliant    bool           // Check if compliant against Mozilla's recommended config
+	CertInfo       CertInfo       `json:"certificate_info"`
+	EllipticCurves EllipticCurves `json:"elliptic_curves"`
 
 	Heartbleed *struct {
 		StandardErrorStatus
@@ -170,24 +169,24 @@ type CertInfoResult struct {
 type Deployment struct {
 	StapleExtension   bool             `json:"leaf_certificate_has_must_staple_extension"`
 	IsLeafEv          bool             `json:"leaf_certificate_is_ev"`
-	SctsCount         *int             `json:"leaf_certificate_signed_certificate_timestamps_count"`
+	SctsCount         int              `json:"leaf_certificate_signed_certificate_timestamps_count"`
 	MatchHostname     bool             `json:"leaf_certificate_subject_matches_hostname"`
-	OcspResponse      *OscpResponse    `json:"ocsp_response"`
-	OcspIsTrusted     *bool            `json:"ocsp_response_is_trusted"`
+	OcspResponse      OscpResponse     `json:"ocsp_response"`
+	OcspIsTrusted     bool             `json:"ocsp_response_is_trusted"`
 	PathValidation    []PathValidation `json:"path_validation_results"`
 	CertificateChain  []Certificate    `json:"received_certificate_chain"`
-	HasAnchor         *bool            `json:"received_chain_contains_anchor_certificate"`
+	HasAnchor         bool             `json:"received_chain_contains_anchor_certificate"`
 	HasValidOrder     bool             `json:"received_chain_has_valid_order"`
-	VerifiedCertChain *[]Certificate   `json:"verified_certificate_chain"`
-	SymantecDistrust  *bool            `json:"verified_chain_has_legacy_symantec_anchor"`
-	HasSha1           *bool            `json:"verified_chain_has_sha1_signature"`
+	VerifiedCertChain []Certificate    `json:"verified_certificate_chain"`
+	SymantecDistrust  bool             `json:"verified_chain_has_legacy_symantec_anchor"`
+	HasSha1           bool             `json:"verified_chain_has_sha1_signature"`
 }
 
 type PathValidation struct {
-	OpenSslError         *string        `json:"openssl_error_string"`
-	TrustStore           TrustStore     `json:"trust_store"`
-	VerifiedChain        *[]Certificate `json:"verified_certificate_chain"`
-	ValidationSuccessful bool           `json:"was_validation_successful"`
+	OpenSslError         string        `json:"openssl_error_string"`
+	TrustStore           TrustStore    `json:"trust_store"`
+	VerifiedChain        []Certificate `json:"verified_certificate_chain"`
+	ValidationSuccessful bool          `json:"was_validation_successful"`
 }
 
 type Certificate struct {
@@ -199,11 +198,11 @@ type Certificate struct {
 	NotValidAfter     UtcTime     `json:"not_valid_after"`
 	NotValidBefore    UtcTime     `json:"not_valid_before"`
 	PublicKey         PublicKey   `json:"public_key"`
-	Serial            big.Int      `json:"serial_number"`
+	Serial            big.Int     `json:"serial_number"`
 	SignatureAlg      Oid         `json:"signature_algorithm_oid"`
 	SignatureHashAlgo SigHashAlgo `json:"signature_hash_algorithm"`
 	Subject           Entity      `json:"subject"`
-	SubjectAltName    SubjAltName `json:"subjectAlternativeName"`
+	SubjectAltName    SubjAltName `json:"subject_alternative_name"`
 }
 
 type SigHashAlgo struct {
@@ -212,8 +211,8 @@ type SigHashAlgo struct {
 }
 
 type Entity struct {
-	Attributes *[]Attribute `json:"attributes"`     // Empty if Parsing error is set
-	RfcString  *string      `json:"rfc4514_string"` // Empty if Parsing error is set
+	Attributes []Attribute `json:"attributes"`     // Empty if Parsing error is set
+	RfcString  string      `json:"rfc4514_string"` // Empty if Parsing error is set
 }
 
 type Attribute struct {
@@ -234,43 +233,35 @@ type SubjAltName struct {
 }
 
 type PublicKey struct {
-	Algorithm string `json:"algorithm"`
-	Curve     string `json:"curve"`
-	Exponent  int    `json:"exponent"`
-	Size      int    `json:"size"`
+	Algorithm      string `json:"algorithm"`
+	Curve          string `json:"ec_curve_name"`
+	Exponent       int    `json:"rsa_e"`
+	Size           int    `json:"key_size"`
+	RsaN           int    `json:"rsa_n"`
+	EllipticCurveX int    `json:"ec_x"`
+	EllipticCurveY int    `json:"ec_y"`
 }
 
 type TrustStore struct {
 	Path    string `json:"path"`
 	Name    string `json:"name"`
 	Version string `json:"version"`
-	EvOids  *[]Oid `json:"ev_oids"`
+	EvOids  []Oid  `json:"ev_oids"`
 }
 
 type OscpResponse struct {
-	Status            string         `json:"status"`
-	Type              string         `json:"type"`
-	Version           int            `json:"version"`
-	ResponderId       string         `json:"responder_id"`
-	ProducedAt        UtcTime        `json:"produced_at"`
-	CertificateStatus string         `json:"certificate_status"`
-	ThisUpdate        UtcTime        `json:"this_update"`
-	NextUpdate        UtcTime        `json:"next_update"`
-	HashAlgorithm     string         `json:"hash_algorithm"`
-	IssuerNameHash    string         `json:"issuer_name_hash"`
-	IssuerKeyHash     string         `json:"issuer_key_hash"`
-	SerialNumber      big.Int         `json:"serial_number"`
-	Extensions        []SctExtension `json:"extensions"` // Currently only SignedCertificateTimestampsExtension
-}
-
-type SctExtension struct {
-	Scts []SignedCertificateTimestamp
-}
-
-type SignedCertificateTimestamp struct {
-	Version string  `json:"version"`
-	LogId   string  `json:"log_id"`
-	Time    UtcTime `json:"timestamp"`
+	Status            string  `json:"status"`
+	Type              string  `json:"type"`
+	Version           int     `json:"version"`
+	ResponderId       string  `json:"responder_id"`
+	ProducedAt        UtcTime `json:"produced_at"`
+	CertificateStatus string  `json:"certificate_status"`
+	ThisUpdate        UtcTime `json:"this_update"`
+	NextUpdate        UtcTime `json:"next_update"`
+	HashAlgorithm     string  `json:"hash_algorithm"`
+	IssuerNameHash    string  `json:"issuer_name_hash"`
+	IssuerKeyHash     string  `json:"issuer_key_hash"`
+	SerialNumber      big.Int `json:"serial_number"`
 }
 
 // Elliptic Curves
@@ -295,7 +286,7 @@ type Curve struct {
 
 type Protocol struct {
 	StandardErrorStatus
-	Result *CipherResult `json:"result"`
+	Result CipherResult `json:"result"`
 }
 
 type CipherResult struct {
@@ -487,31 +478,23 @@ type ResumptionRate struct {
 // Vulnerabilities & weaknesses
 
 type HttpHeaders struct {
-	ExpectedCt    *ExpectedCtHeader `json:"expect_ct_header"`
-	ErrorTrace    string            `json:"http_error_trace"`
-	PathRedircted *string           `json:"http_path_redirected_to"`
-	RequestSent   string            `json:"http_request_sent"`
-	Hsts          *HstsHeader       `json:"strict_transport_security_header"`
+	ExpectedCt    ExpectedCtHeader `json:"expect_ct_header"`
+	ErrorTrace    string           `json:"http_error_trace"`
+	PathRedircted string           `json:"http_path_redirected_to"`
+	RequestSent   string           `json:"http_request_sent"`
+	Hsts          HstsHeader       `json:"strict_transport_security_header"`
 }
 
 type HstsHeader struct {
 	Preload           bool `json:"preload"`
 	IncludeSubdomains bool `json:"include_subdomains"`
-	MaxAge            *int `json:"max_age"`
-}
-
-type HpkpHeader struct {
-	Sha256Pins        []string `json:"sha256_pins"`
-	IncludeSubdomains bool     `json:"include_subdomains"`
-	MaxAge            *int     `json:"max_age"`
-	ReportUri         *string  `json:"report_uri"`
-	ReportTo          *string  `json:"report_to"`
+	MaxAge            int  `json:"max_age"`
 }
 
 type ExpectedCtHeader struct {
-	Enforce   bool    `json:"enforce"`
-	MaxAge    *int    `json:"max_age"`
-	ReportUri *string `json:"report_uri"`
+	Enforce   bool   `json:"enforce"`
+	MaxAge    int    `json:"max_age"`
+	ReportUri string `json:"report_uri"`
 }
 
 // Helper struct, because SSLyze (or Cryptography to be more precise) converts the time into UTC and removes the time
