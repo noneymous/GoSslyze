@@ -87,8 +87,8 @@ type StandardErrorStatus struct {
 
 type CommandResults struct {
 	IsCompliant    bool           // Check if compliant against Mozilla's recommended config
-	CertInfo       CertInfo       `json:"certificate_info"`
-	EllipticCurves EllipticCurves `json:"elliptic_curves"`
+	CertInfo       *CertInfo       `json:"certificate_info"`
+	EllipticCurves *EllipticCurves `json:"elliptic_curves"`
 
 	Heartbleed *struct {
 		StandardErrorStatus
@@ -171,13 +171,13 @@ type Deployment struct {
 	IsLeafEv          bool             `json:"leaf_certificate_is_ev"`
 	SctsCount         int              `json:"leaf_certificate_signed_certificate_timestamps_count"`
 	MatchHostname     bool             `json:"leaf_certificate_subject_matches_hostname"`
-	OcspResponse      OscpResponse     `json:"ocsp_response"`
+	OcspResponse      *OscpResponse     `json:"ocsp_response"`
 	OcspIsTrusted     bool             `json:"ocsp_response_is_trusted"`
 	PathValidation    []PathValidation `json:"path_validation_results"`
 	CertificateChain  []Certificate    `json:"received_certificate_chain"`
 	HasAnchor         bool             `json:"received_chain_contains_anchor_certificate"`
 	HasValidOrder     bool             `json:"received_chain_has_valid_order"`
-	VerifiedCertChain []Certificate    `json:"verified_certificate_chain"`
+	VerifiedCertChain *[]Certificate    `json:"verified_certificate_chain"`
 	SymantecDistrust  bool             `json:"verified_chain_has_legacy_symantec_anchor"`
 	HasSha1           bool             `json:"verified_chain_has_sha1_signature"`
 }
@@ -185,7 +185,7 @@ type Deployment struct {
 type PathValidation struct {
 	OpenSslError         string        `json:"openssl_error_string"`
 	TrustStore           TrustStore    `json:"trust_store"`
-	VerifiedChain        []Certificate `json:"verified_certificate_chain"`
+	VerifiedChain        *[]Certificate `json:"verified_certificate_chain"`
 	ValidationSuccessful bool          `json:"was_validation_successful"`
 }
 
@@ -211,7 +211,7 @@ type SigHashAlgo struct {
 }
 
 type Entity struct {
-	Attributes []Attribute `json:"attributes"`     // Empty if Parsing error is set
+	Attributes *[]Attribute `json:"attributes"`     // Empty if Parsing error is set
 	RfcString  string      `json:"rfc4514_string"` // Empty if Parsing error is set
 }
 
@@ -237,7 +237,7 @@ type PublicKey struct {
 	Curve          string `json:"ec_curve_name"`
 	Exponent       int    `json:"rsa_e"`
 	Size           int    `json:"key_size"`
-	RsaN           int    `json:"rsa_n"`
+	RsaN           big.Int    `json:"rsa_n"`
 	EllipticCurveX int    `json:"ec_x"`
 	EllipticCurveY int    `json:"ec_y"`
 }
@@ -246,7 +246,7 @@ type TrustStore struct {
 	Path    string `json:"path"`
 	Name    string `json:"name"`
 	Version string `json:"version"`
-	EvOids  []Oid  `json:"ev_oids"`
+	EvOids  *[]Oid  `json:"ev_oids"`
 }
 
 type OscpResponse struct {
@@ -286,7 +286,7 @@ type Curve struct {
 
 type Protocol struct {
 	StandardErrorStatus
-	Result CipherResult `json:"result"`
+	Result *CipherResult `json:"result"`
 }
 
 type CipherResult struct {
@@ -478,11 +478,11 @@ type ResumptionRate struct {
 // Vulnerabilities & weaknesses
 
 type HttpHeaders struct {
-	ExpectedCt    ExpectedCtHeader `json:"expect_ct_header"`
+	ExpectedCt    *ExpectedCtHeader `json:"expect_ct_header"`
 	ErrorTrace    string           `json:"http_error_trace"`
 	PathRedircted string           `json:"http_path_redirected_to"`
 	RequestSent   string           `json:"http_request_sent"`
-	Hsts          HstsHeader       `json:"strict_transport_security_header"`
+	Hsts          *HstsHeader       `json:"strict_transport_security_header"`
 }
 
 type HstsHeader struct {
