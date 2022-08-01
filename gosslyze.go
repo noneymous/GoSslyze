@@ -18,7 +18,7 @@ type Scanner struct {
 	Result HostResult      // Scan result
 }
 
-// Constructor for SSLyze wrapper
+// NewScanner is the constructor for SSLyze wrapper
 func NewScanner(sslyzePath string, args ...string) Scanner {
 
 	// Initialize values
@@ -42,12 +42,14 @@ func (s *Scanner) Run() (*HostResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	tempFile.Chmod(1700)
+	_ = tempFile.Chmod(1700)
 
 	// Enable json output and let it be output to temporary file.
 	s.args = append(s.args, fmt.Sprintf("--json_out=%s", tempFile.Name()))
 
-	defer os.Remove(tempFile.Name())
+	defer func() {
+		_ = os.Remove(tempFile.Name())
+	}()
 
 	// Prepare the command
 	cmd := exec.Command(s.path, s.args...)
@@ -122,7 +124,7 @@ func (s *Scanner) WithMozillaConfig(config string) {
 	s.args = append(s.args, fmt.Sprintf("--mozilla_config=%s", config))
 }
 
-// Update the default trust stores used by SSLyze. The latest stores will be downloaded from
+// UpdateTrustStores updates the default trust stores used by SSLyze. The latest stores will be downloaded from
 // https://github.com/nabla-c0d3/trust_stores_observatory. This option is meant to be used
 // separately, and will silence any other command line option supplied to SSLyze.
 func (s *Scanner) UpdateTrustStores() {
@@ -173,7 +175,7 @@ func (s *Scanner) WithRenegotiation() {
 	s.args = append(s.args, "--reneg")
 }
 
-// CheckHeartbleed test the server(s) for the OpenSSL Heartbleed vulnerability.
+// WithHeartbleed tests the server(s) for the OpenSSL Heartbleed vulnerability.
 func (s *Scanner) WithHeartbleed() {
 	s.args = append(s.args, "--heartbleed")
 }
@@ -183,7 +185,7 @@ func (s *Scanner) WithRobot() {
 	s.args = append(s.args, "--robot")
 }
 
-// CheckCompression test the server(s) for Zlib compression support.
+// WithCompression tests the server(s) for Zlib compression support.
 func (s *Scanner) WithCompression() {
 	s.args = append(s.args, "--compression")
 }
@@ -222,8 +224,8 @@ func (s *Scanner) WithResume() {
 // WithResumeAttempts is to be used with WithResume. Sets the number of session resumptions (both with Session IDs and TLS Tickets)
 // that SSLyze should attempt. The default value is 5, but a higher value such as 100 can be used to get a more accurate
 // measure of how often session resumption succeeds or fails with the server.
-func (s *Scanner) WithResumeAttempts(resum_attempts int) {
-	s.args = append(s.args, fmt.Sprintf("--resum_attempts=%d", resum_attempts))
+func (s *Scanner) WithResumeAttempts(resumeAttempts int) {
+	s.args = append(s.args, fmt.Sprintf("--resum_attempts=%d", resumeAttempts))
 }
 
 // WithCertInfo check validity of server(s) certificate(s) against trust stores (mozzila , apple etc), check for OCSP stapling support.
@@ -286,21 +288,21 @@ func (s *Scanner) WithTlsV1_3() {
 }
 
 // Parse converts SSLyze json output to internal data structure
-func Parse(json_out []byte, std_out string) (*HostResult, error) {
+func Parse(jsonOut []byte, stdOut string) (*HostResult, error) {
 	result := &HostResult{}
 
 	// Try to parse the output data to internal structure
-	errUnmarshal := json.Unmarshal(json_out, result)
+	errUnmarshal := json.Unmarshal(jsonOut, result)
 
 	// Parse Mozilla's config check, this behavior can be removed once the check's results are recorded in the JSON output
-	start_idx := strings.Index(std_out, "COMPLIANCE AGAINST MOZILLA TLS CONFIGURATION")
-	check_result := std_out[start_idx:]
-	result.ComplianceTestDetails = check_result
+	startIdx := strings.Index(stdOut, "COMPLIANCE AGAINST MOZILLA TLS CONFIGURATION")
+	checkResult := stdOut[startIdx:]
+	result.ComplianceTestDetails = checkResult
 	for i, host := range result.Targets {
 		hostname := host.ServerLocation.Hostname
 		port := host.ServerLocation.Port
-		isCompliant := strings.Index(check_result, fmt.Sprintf("%s:%d: FAILED", hostname, port)) == -1 && strings.
-			Index(check_result, fmt.Sprintf("%s:%d: ERROR", hostname, port)) == -1
+		isCompliant := strings.Index(checkResult, fmt.Sprintf("%s:%d: FAILED", hostname, port)) == -1 && strings.
+			Index(checkResult, fmt.Sprintf("%s:%d: ERROR", hostname, port)) == -1
 		result.Targets[i].ScanResult.IsCompliant = isCompliant
 	}
 
