@@ -154,7 +154,7 @@ func (s *Scanner) WithHttpsTunnel(proxy string) {
 // smtp, xmpp, xmpp_server, pop3, ftp, imap, ldap, rdp, postgres, auto
 // Where auto will deduce the protocol from the supplied port number.
 func (s *Scanner) WithStartTls(prot string) {
-	s.args = append(s.args, fmt.Sprintf("--starttls %s", prot))
+	s.args = append(s.args, fmt.Sprintf("--starttls=%s", prot))
 }
 
 // WithXmppTo should be set with 'starttls xmpp'. The parameter should be the hostname that is supposed to be set in the
