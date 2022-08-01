@@ -268,7 +268,7 @@ type OscpResponse struct {
 
 type EllipticCurves struct {
 	StandardErrorStatus
-	Result EllipticCurveResult `json:"result"`
+	Result *EllipticCurveResult `json:"result"`
 }
 
 type EllipticCurveResult struct {
