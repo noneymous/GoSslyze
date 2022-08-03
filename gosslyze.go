@@ -296,14 +296,16 @@ func Parse(jsonOut []byte, stdOut string) (*HostResult, error) {
 
 	// Parse Mozilla's config check, this behavior can be removed once the check's results are recorded in the JSON output
 	startIdx := strings.Index(stdOut, "COMPLIANCE AGAINST MOZILLA TLS CONFIGURATION")
-	checkResult := stdOut[startIdx:]
-	result.ComplianceTestDetails = checkResult
-	for i, host := range result.Targets {
-		hostname := host.ServerLocation.Hostname
-		port := host.ServerLocation.Port
-		isCompliant := strings.Index(checkResult, fmt.Sprintf("%s:%d: FAILED", hostname, port)) == -1 && strings.
-			Index(checkResult, fmt.Sprintf("%s:%d: ERROR", hostname, port)) == -1
-		result.Targets[i].ScanResult.IsCompliant = isCompliant
+	if startIdx != 1 {
+		checkResult := stdOut[startIdx:]
+		result.ComplianceTestDetails = checkResult
+		for i, host := range result.Targets {
+			hostname := host.ServerLocation.Hostname
+			port := host.ServerLocation.Port
+			isCompliant := strings.Index(checkResult, fmt.Sprintf("%s:%d: FAILED", hostname, port)) == -1 && strings.
+				Index(checkResult, fmt.Sprintf("%s:%d: ERROR", hostname, port)) == -1
+			result.Targets[i].ScanResult.IsCompliant = isCompliant
+		}
 	}
 
 	if errUnmarshal != nil {
