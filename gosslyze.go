@@ -298,7 +298,7 @@ func Parse(jsonOut []byte, stdOut string) (*HostResult, error) {
 
 	// Parse Mozilla's config check, this behavior can be removed once the check's results are recorded in the JSON output
 	startIdx := strings.Index(stdOut, "COMPLIANCE AGAINST MOZILLA TLS CONFIGURATION")
-	if startIdx != 1 {
+	if startIdx != -1 {
 		checkResult := stdOut[startIdx:]
 		result.ComplianceTestDetails = checkResult
 		for i, host := range result.Targets {
