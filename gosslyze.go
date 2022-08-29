@@ -42,7 +42,9 @@ func (s *Scanner) Run() (*HostResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	_ = tempFile.Chmod(1700)
+
+	// Adapt file permissions
+	_ = tempFile.Chmod(0660)
 
 	// Enable json output and let it be output to temporary file.
 	s.args = append(s.args, fmt.Sprintf("--json_out=%s", tempFile.Name()))
