@@ -38,9 +38,9 @@ func NewScanner(sslyzePath string, args ...string) Scanner {
 func (s *Scanner) Run() (*HostResult, error) {
 
 	// Create temporary file.
-	tempFile, err := os.CreateTemp("", "json_out")
-	if err != nil {
-		return nil, err
+	tempFile, errCreate := os.CreateTemp("", "json_out")
+	if errCreate != nil {
+		return nil, fmt.Errorf("unable to create temporary file for JSON output: %v", errCreate)
 	}
 
 	// Adapt file permissions
@@ -48,10 +48,6 @@ func (s *Scanner) Run() (*HostResult, error) {
 
 	// Enable json output and let it be output to temporary file.
 	s.args = append(s.args, fmt.Sprintf("--json_out=%s", tempFile.Name()))
-
-	defer func() {
-		_ = os.Remove(tempFile.Name())
-	}()
 
 	// Prepare the command
 	cmd := exec.Command(s.path, s.args...)
@@ -75,6 +71,19 @@ func (s *Scanner) Run() (*HostResult, error) {
 		done <- cmd.Wait()
 	}()
 
+	defer func() {
+		errClose := tempFile.Close()
+		if errClose != nil {
+			fmt.Println("Can not close JSON output file.")
+		}
+
+		errRemove:= os.Remove(tempFile.Name())
+		if errRemove != nil {
+			fmt.Println("Can not delete JSON output file.")
+		}
+
+	}()
+
 	// Check if scan finished or timed out
 	select {
 	case <-s.ctx.Done():
@@ -88,10 +97,9 @@ func (s *Scanner) Run() (*HostResult, error) {
 		// Scan finished before timeout.
 
 		// Read ouput JSON file
-		out, err := os.ReadFile(tempFile.Name())
-		if err != nil {
-			fmt.Println("Can not read JSON output file")
-			return nil, err
+		out, errRead := os.ReadFile(tempFile.Name())
+		if errRead != nil {
+			return nil, fmt.Errorf("unable to read JSON output file: %v", errRead)
 		}
 
 		// Check if scan threw errors
