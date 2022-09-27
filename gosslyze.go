@@ -43,6 +43,11 @@ func (s *Scanner) Run() (*HostResult, error) {
 		return nil, fmt.Errorf("unable to create temporary file for JSON output: %v", errCreate)
 	}
 
+	defer func() {
+		_ = tempFile.Close()
+		_ = os.Remove(tempFile.Name())
+	}()
+
 	// Adapt file permissions
 	_ = tempFile.Chmod(0660)
 
@@ -69,19 +74,6 @@ func (s *Scanner) Run() (*HostResult, error) {
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Wait()
-	}()
-
-	defer func() {
-		errClose := tempFile.Close()
-		if errClose != nil {
-			fmt.Println("Can not close JSON output file.")
-		}
-
-		errRemove:= os.Remove(tempFile.Name())
-		if errRemove != nil {
-			fmt.Println("Can not delete JSON output file.")
-		}
-
 	}()
 
 	// Check if scan finished or timed out
