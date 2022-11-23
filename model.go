@@ -233,13 +233,13 @@ type SubjAltName struct {
 }
 
 type PublicKey struct {
-	Algorithm      string `json:"algorithm"`
-	Curve          string `json:"ec_curve_name"`
-	Exponent       int    `json:"rsa_e"`
-	Size           int    `json:"key_size"`
-	RsaN           big.Int    `json:"rsa_n"`
-	EllipticCurveX int    `json:"ec_x"`
-	EllipticCurveY int    `json:"ec_y"`
+	Algorithm      string  `json:"algorithm"`
+	Curve          string  `json:"ec_curve_name"`
+	Exponent       int     `json:"rsa_e"`
+	Size           int     `json:"key_size"`
+	RsaN           big.Int `json:"rsa_n"`
+	EllipticCurveX big.Int `json:"ec_x"`
+	EllipticCurveY big.Int `json:"ec_y"`
 }
 
 type TrustStore struct {
