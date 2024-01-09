@@ -229,7 +229,51 @@ type Oid struct {
 }
 
 type SubjAltName struct {
-	Dns []string `json:"dns"`
+	Dns         []string `json:"dns_names"`
+	IPAddresses []string `json:"ip_addresses"`
+}
+
+// UnmarshalJSON for the SubjAltName struct.
+// Necessary because in older versions the "dns_names" is called "dns" and the "ip_addresses" is missing
+func (s *SubjAltName) UnmarshalJSON(data []byte) error {
+
+	// First, deserialize everything into a map of map
+	var rawMap map[string]*json.RawMessage
+	errUnmar := json.Unmarshal(data, &rawMap)
+	if errUnmar != nil {
+		return errUnmar
+	}
+
+	// Handle the ip addresses
+	rawIpData, ok := rawMap["ip_addresses"]
+	if !ok || rawIpData == nil || len(*rawIpData) == 0 {
+		s.IPAddresses = []string{} // Create empty list if ip_addresses field is missing, empty or nil
+	} else {
+		var ip []string
+		errUnmar = json.Unmarshal(*rawIpData, &ip)
+		if errUnmar != nil {
+			return errUnmar
+		}
+		s.IPAddresses = ip
+	}
+
+	// Handle "dns_names" (or "dns") field
+	rawDnsData, ok := rawMap["dns"]
+	if !ok {
+		rawDnsData, ok = rawMap["dns_names"]
+		if !ok || rawDnsData == nil || len(*rawDnsData) == 0 {
+			s.Dns = []string{} // Create empty list if "dns_names" / "dns" field is missing, empty or nil
+		}
+	} else {
+		var dns []string
+		errUnmar = json.Unmarshal(*rawDnsData, &dns)
+		if errUnmar != nil {
+			return errUnmar
+		}
+		s.Dns = dns
+	}
+
+	return nil
 }
 
 type PublicKey struct {
@@ -510,6 +554,15 @@ func (ut *UtcTime) UnmarshalJSON(data []byte) error {
 	t, errParse := time.Parse(timeFormat, strings.Trim(string(data), `"`))
 	if errParse != nil {
 		return errParse
+	}
+
+	if len(strings.Trim(string(data), `"`)) == 0 {
+		ut.String = ""
+		ut.Time = time.Time{}
+		if !ut.Time.IsZero() {
+			return errors.New("time could not be set to zero")
+		}
+		return nil
 	}
 
 	ut.String = string(data)
