@@ -96,8 +96,20 @@ func (s *Scanner) Run() (*HostResult, error) {
 
 		// Check if scan threw errors
 		if stderr.Len() > 0 {
+
+			// Print error to stdout
 			fmt.Println(stderr.String())
-			return nil, errors.New(strings.Trim(stderr.String(), ".\n"))
+
+			// Ignore UserWarning errors
+			userWarningsOnly := true
+			for _, line := range strings.Split(strings.TrimSuffix(stderr.String(), "\n"), "\n") {
+				if !strings.Contains(line, "UserWarning:") {
+					userWarningsOnly = false
+				}
+			}
+			if !userWarningsOnly {
+				return nil, errors.New(strings.Trim(stderr.String(), ".\n"))
+			}
 		}
 
 		// Parse returned data
