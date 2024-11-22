@@ -96,8 +96,17 @@ func (s *Scanner) Run() (*HostResult, error) {
 
 		// Check if scan threw errors
 		if stderr.Len() > 0 {
-			fmt.Println(stderr.String())
-			return nil, errors.New(strings.Trim(stderr.String(), ".\n"))
+
+			// Ignore UserWarning and CryptographyDeprecationWarning warnings in errors
+			warningsOnly := true
+			for _, line := range strings.Split(strings.TrimSuffix(stderr.String(), "\n"), "\n") {
+				if !strings.Contains(line, "UserWarning:") && !strings.Contains(line, "CryptographyDeprecationWarning:") {
+					warningsOnly = false
+				}
+			}
+			if !warningsOnly {
+				return nil, errors.New(strings.Trim(stderr.String(), ".\n"))
+			}
 		}
 
 		// Parse returned data
