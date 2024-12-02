@@ -561,7 +561,7 @@ func (ut *UtcTime) UnmarshalJSON(data []byte) error {
 	d := strings.Trim(string(data), `"`)
 
 	// Return Utc Zero time
-	if len(d) == 0 {
+	if len(d) == 0 || d == "null" {
 		return nil
 	}
 
