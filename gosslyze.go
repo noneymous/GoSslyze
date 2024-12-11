@@ -97,9 +97,12 @@ func (s *Scanner) Run() (*HostResult, error) {
 		// Check if scan threw errors
 		if stderr.Len() > 0 {
 
+			// Read stderr buffer
+			var stderrStr = strings.Trim(stderr.String(), " \t\n")
+
 			// Ignore UserWarning and CryptographyDeprecationWarning warnings in errors
 			var errs []string
-			for _, line := range strings.Split(strings.TrimSuffix(stderr.String(), "\n"), "\n") {
+			for _, line := range strings.Split(stderrStr, "\n") {
 				l := strings.ReplaceAll(line, " ", "")
 				l = strings.ReplaceAll(l, "\n", "")
 				l = strings.ReplaceAll(l, "\t", "")
@@ -107,8 +110,10 @@ func (s *Scanner) Run() (*HostResult, error) {
 					errs = append(errs, strings.Trim(line, " .\n\t"))
 				}
 			}
+
+			// Return stderr output if errors were contained
 			if len(errs) > 0 {
-				return nil, errors.New(strings.Join(errs, "\n"))
+				return nil, errors.New(stderrStr) // Nevertheless return whole stderr out for better debuggability
 			}
 		}
 
