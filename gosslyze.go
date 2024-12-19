@@ -88,7 +88,7 @@ func (s *Scanner) Run() (*HostResult, error) {
 
 		// Scan finished before timeout.
 
-		// Read ouput JSON file
+		// Read output JSON file
 		out, errRead := os.ReadFile(tempFile.Name())
 		if errRead != nil {
 			return nil, fmt.Errorf("unable to read JSON output file: %v", errRead)
@@ -106,7 +106,10 @@ func (s *Scanner) Run() (*HostResult, error) {
 				l := strings.ReplaceAll(line, " ", "")
 				l = strings.ReplaceAll(l, "\n", "")
 				l = strings.ReplaceAll(l, "\t", "")
-				if l != "" && !strings.Contains(l, "UserWarning:") && !strings.Contains(l, "CryptographyDeprecationWarning:") {
+				if l != "" && // Ignore empty lines
+					!strings.Contains(l, "UserWarning:") && // Ignore user warnings
+					!strings.Contains(l, "CryptographyDeprecationWarning:") && // Ignore deprecation warnings
+					!strings.HasPrefix(l, "  ") { // Ignore indented lines as they belong to the previous message
 					errs = append(errs, strings.Trim(line, " .\n\t"))
 				}
 			}
