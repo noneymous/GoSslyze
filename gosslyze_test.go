@@ -32,6 +32,7 @@ func TestSample(t *testing.T) {
 	s.WithTlsV1_1()
 	s.WithTlsV1_2()
 	s.WithTlsV1_3()
+	s.WithEms()
 	s.WithCcs()
 	s.WithHeartbleed()
 	s.WithRenegotiation()

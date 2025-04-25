@@ -122,6 +122,10 @@ type CommandResults struct {
 		StandardErrorStatus
 		Result *HttpHeaders `json:"result"`
 	} `json:"http_headers"`
+	TlsEms *struct {
+		StandardErrorStatus
+		Result *TlsEms `json:"result"`
+	} `json:"tls_extended_master_secret"`
 
 	SslV2   *Protocol `json:"ssl_2_0_cipher_suites"`
 	SslV3   *Protocol `json:"ssl_3_0_cipher_suites"`
@@ -184,7 +188,7 @@ type Deployment struct {
 
 type PathValidation struct {
 	ValidationError string `json:"validation_error"`     // Previously named "openssl_error_string" in Sslyze < 6.0.0
-	OpenSslError    string `json:"openssl_error_string"` // Renamed to "validation_error" in Sslyze < 6.0.0
+	OpenSslError    string `json:"openssl_error_string"` // Renamed to "validation_error" in Sslyze > 6.0.0
 
 	TrustStore           TrustStore     `json:"trust_store"`
 	VerifiedChain        *[]Certificate `json:"verified_certificate_chain"`
@@ -524,11 +528,11 @@ type ResumptionRate struct {
 // Vulnerabilities & weaknesses
 
 type HttpHeaders struct {
-	ExpectedCt    *ExpectedCtHeader `json:"expect_ct_header"`
-	ErrorTrace    string            `json:"http_error_trace"`
-	PathRedircted string            `json:"http_path_redirected_to"`
-	RequestSent   string            `json:"http_request_sent"`
-	Hsts          *HstsHeader       `json:"strict_transport_security_header"`
+	ExpectedCt     *ExpectedCtHeader `json:"expect_ct_header"`
+	ErrorTrace     string            `json:"http_error_trace"`
+	PathRedirected string            `json:"http_path_redirected_to"`
+	RequestSent    string            `json:"http_request_sent"`
+	Hsts           *HstsHeader       `json:"strict_transport_security_header"`
 }
 
 type HstsHeader struct {
@@ -541,6 +545,10 @@ type ExpectedCtHeader struct {
 	Enforce   bool   `json:"enforce"`
 	MaxAge    int    `json:"max_age"`
 	ReportUri string `json:"report_uri"`
+}
+
+type TlsEms struct {
+	SupportsEmsExtension bool `json:"supports_ems_extension"`
 }
 
 // Helper struct, because some SSLyze versions (or their used Cryptography to be more precise) converts the time
