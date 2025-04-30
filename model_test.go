@@ -94,7 +94,7 @@ func TestPathValidationUnmarshalJSON(t *testing.T) {
             }`,
 			expected: PathValidation{
 				ValidationError: "SSL error occurred",
-				openSslError:    "SSL error occurred",
+				OpenSslError:    "SSL error occurred",
 				TrustStore: TrustStore{
 					Path:    "/path/to/store",
 					Name:    "Mozilla",
@@ -121,6 +121,7 @@ func TestPathValidationUnmarshalJSON(t *testing.T) {
             }`,
 			expected: PathValidation{
 				ValidationError: "Validation failed",
+				OpenSslError:    "",
 				TrustStore: TrustStore{
 					Path:    "/path/to/store",
 					Name:    "Mozilla",
@@ -156,8 +157,8 @@ func TestPathValidationUnmarshalJSON(t *testing.T) {
 			}
 
 			// Check openSslError field
-			if got.openSslError != tt.expected.openSslError {
-				t.Errorf("openSslError = %v, want %v", got.openSslError, tt.expected.openSslError)
+			if got.OpenSslError != tt.expected.OpenSslError {
+				t.Errorf("openSslError = %v, want %v", got.OpenSslError, tt.expected.OpenSslError)
 			}
 		})
 	}

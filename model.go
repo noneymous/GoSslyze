@@ -196,7 +196,7 @@ type PathValidation struct {
 	ValidationSuccessful bool           `json:"was_validation_successful"`
 
 	// Deprecated fields
-	openSslError string `json:"openssl_error_string"` // Renamed to "validation_error" in Sslyze > 6.0.0
+	OpenSslError string `json:"openssl_error_string"` // Renamed to "validation_error" in Sslyze > 6.0.0
 }
 
 type Certificate struct {
@@ -440,7 +440,7 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		return errUnmar
 	}
 
-	// Handle the the ephemeral key info
+	// Handle the ephemeral key info
 	rawKeyData, ok := rawMap["ephemeral_key"]
 	if !ok {
 		c.EphemeralKey = nil
@@ -608,38 +608,25 @@ func (ut *UtcTime) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON for the PathValidation struct.
 // Necessary because openssl_error_string was renamed to validation_error in sslyze > 6.0.0
 func (p *PathValidation) UnmarshalJSON(data []byte) error {
-	// First, create a temporary struct with same fields
-	type TempPathValidation struct {
-		ValidationError      string         `json:"validation_error"`
-		TrustStore           TrustStore     `json:"trust_store"`
-		VerifiedChain        *[]Certificate `json:"verified_certificate_chain"`
-		ValidationSuccessful bool           `json:"was_validation_successful"`
-		OpenSslError         string         `json:"openssl_error_string"`
-	}
 
-	// Create a temporary variable of the temp struct
-	var temp TempPathValidation
+	// Prepare temporary auxiliary data structure to load raw Json data
+	type aux PathValidation
+	var raw aux
 
-	// Unmarshal into the temporary struct
-	if err := json.Unmarshal(data, &temp); err != nil {
+	// Unmarshal serialized Json into temporary auxiliary structure
+	err := json.Unmarshal(data, &raw)
+	if err != nil {
 		return err
 	}
 
-	// Copy the regular fields
-	p.TrustStore = temp.TrustStore
-	p.VerifiedChain = temp.VerifiedChain
-	p.ValidationSuccessful = temp.ValidationSuccessful
+	// Copy loaded Json values to actual
+	*p = PathValidation(raw)
 
 	// Handle the validation error field
-	if temp.OpenSslError != "" {
-		p.ValidationError = temp.OpenSslError
-	} else {
-		p.ValidationError = temp.ValidationError
+	if raw.OpenSslError != "" {
+		p.ValidationError = raw.OpenSslError
 	}
 
-	// Store the original openssl_error_string value
-	p.openSslError = temp.OpenSslError
-
-	// Return without error
+	// Return nil as everything went fine
 	return nil
 }
