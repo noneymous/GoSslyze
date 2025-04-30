@@ -1,6 +1,7 @@
 package gosslyze
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -66,6 +67,98 @@ func TestUtcTime_UnmarshalJSON(t *testing.T) {
 			}
 			fmt.Println(ut.Time)
 			fmt.Println()
+		})
+	}
+}
+
+func TestPathValidationUnmarshalJSON(t *testing.T) {
+	// Define test cases
+	tests := []struct {
+		name     string
+		input    string
+		expected PathValidation
+		wantErr  bool
+	}{
+		{
+			name: "Old format with openssl_error_string",
+			input: `{
+                "openssl_error_string": "SSL error occurred",
+                "trust_store": {
+                    "path": "/path/to/store",
+                    "name": "Mozilla",
+                    "version": "2023",
+                    "ev_oids": null
+                },
+                "verified_certificate_chain": null,
+                "was_validation_successful": false
+            }`,
+			expected: PathValidation{
+				ValidationError: "SSL error occurred",
+				openSslError:    "SSL error occurred",
+				TrustStore: TrustStore{
+					Path:    "/path/to/store",
+					Name:    "Mozilla",
+					Version: "2023",
+					EvOids:  nil,
+				},
+				VerifiedChain:        nil,
+				ValidationSuccessful: false,
+			},
+			wantErr: false,
+		},
+		{
+			name: "New Format with validation_error",
+			input: `{
+                "validation_error": "Validation failed",
+                "trust_store": {
+                    "path": "/path/to/store",
+                    "name": "Mozilla",
+                    "version": "2023",
+                    "ev_oids": null
+                },
+                "verified_certificate_chain": null,
+                "was_validation_successful": false
+            }`,
+			expected: PathValidation{
+				ValidationError: "Validation failed",
+				TrustStore: TrustStore{
+					Path:    "/path/to/store",
+					Name:    "Mozilla",
+					Version: "2023",
+					EvOids:  nil,
+				},
+				VerifiedChain:        nil,
+				ValidationSuccessful: false,
+			},
+			wantErr: false,
+		},
+	}
+
+	// Run test cases
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got PathValidation
+			err := json.Unmarshal([]byte(tt.input), &got)
+
+			// Check error cases
+			if (err != nil) != tt.wantErr {
+				t.Errorf("PathValidation.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				return
+			}
+
+			// Check ValidationError field
+			if got.ValidationError != tt.expected.ValidationError {
+				t.Errorf("ValidationError = %v, want %v", got.ValidationError, tt.expected.ValidationError)
+			}
+
+			// Check openSslError field
+			if got.openSslError != tt.expected.openSslError {
+				t.Errorf("openSslError = %v, want %v", got.openSslError, tt.expected.openSslError)
+			}
 		})
 	}
 }

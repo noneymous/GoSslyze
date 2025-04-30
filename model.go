@@ -122,7 +122,7 @@ type CommandResults struct {
 		StandardErrorStatus
 		Result *HttpHeaders `json:"result"`
 	} `json:"http_headers"`
-	TlsEms *struct {
+	TlsEms *struct { // Check introduced in Sslyze 6.1.0
 		StandardErrorStatus
 		Result *TlsEms `json:"result"`
 	} `json:"tls_extended_master_secret"`
@@ -174,7 +174,6 @@ type Deployment struct {
 	StapleExtension   bool             `json:"leaf_certificate_has_must_staple_extension"`
 	IsLeafEv          bool             `json:"leaf_certificate_is_ev"`
 	SctsCount         int              `json:"leaf_certificate_signed_certificate_timestamps_count"`
-	MatchHostname     bool             `json:"leaf_certificate_subject_matches_hostname"` // Removed in Sslyze 6.0.0
 	OcspResponse      *OscpResponse    `json:"ocsp_response"`
 	OcspIsTrusted     bool             `json:"ocsp_response_is_trusted"`
 	PathValidation    []PathValidation `json:"path_validation_results"`
@@ -184,15 +183,20 @@ type Deployment struct {
 	VerifiedCertChain *[]Certificate   `json:"verified_certificate_chain"`
 	SymantecDistrust  bool             `json:"verified_chain_has_legacy_symantec_anchor"`
 	HasSha1           bool             `json:"verified_chain_has_sha1_signature"`
+
+	// Deprecated fields
+	// Removed in Sslyze 6.0.0, instead look for "no matching subjectAltName" in validation_error
+	MatchHostname bool `json:"leaf_certificate_subject_matches_hostname"`
 }
 
 type PathValidation struct {
-	ValidationError string `json:"validation_error"`     // Previously named "openssl_error_string" in Sslyze < 6.0.0
-	OpenSslError    string `json:"openssl_error_string"` // Renamed to "validation_error" in Sslyze > 6.0.0
-
+	ValidationError      string         `json:"validation_error"` // Previously named "openssl_error_string" in Sslyze < 6.0.0
 	TrustStore           TrustStore     `json:"trust_store"`
 	VerifiedChain        *[]Certificate `json:"verified_certificate_chain"`
 	ValidationSuccessful bool           `json:"was_validation_successful"`
+
+	// Deprecated fields
+	openSslError string `json:"openssl_error_string"` // Renamed to "validation_error" in Sslyze > 6.0.0
 }
 
 type Certificate struct {
@@ -599,4 +603,43 @@ func (ut *UtcTime) UnmarshalJSON(data []byte) error {
 func (ut *UtcTime) MarshalJSON() ([]byte, error) {
 	stamp := fmt.Sprintf("\"%s\"", ut.Time.Format(timeFormats[0]))
 	return []byte(stamp), nil
+}
+
+// UnmarshalJSON for the PathValidation struct.
+// Necessary because openssl_error_string was renamed to validation_error in sslyze > 6.0.0
+func (p *PathValidation) UnmarshalJSON(data []byte) error {
+	// First, create a temporary struct with same fields
+	type TempPathValidation struct {
+		ValidationError      string         `json:"validation_error"`
+		TrustStore           TrustStore     `json:"trust_store"`
+		VerifiedChain        *[]Certificate `json:"verified_certificate_chain"`
+		ValidationSuccessful bool           `json:"was_validation_successful"`
+		OpenSslError         string         `json:"openssl_error_string"`
+	}
+
+	// Create a temporary variable of the temp struct
+	var temp TempPathValidation
+
+	// Unmarshal into the temporary struct
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	// Copy the regular fields
+	p.TrustStore = temp.TrustStore
+	p.VerifiedChain = temp.VerifiedChain
+	p.ValidationSuccessful = temp.ValidationSuccessful
+
+	// Handle the validation error field
+	if temp.OpenSslError != "" {
+		p.ValidationError = temp.OpenSslError
+	} else {
+		p.ValidationError = temp.ValidationError
+	}
+
+	// Store the original openssl_error_string value
+	p.openSslError = temp.OpenSslError
+
+	// Return without error
+	return nil
 }
