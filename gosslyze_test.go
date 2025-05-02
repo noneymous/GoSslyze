@@ -32,7 +32,7 @@ func TestSample(t *testing.T) {
 	s.WithTlsV1_1()
 	s.WithTlsV1_2()
 	s.WithTlsV1_3()
-	s.WithEms()
+	s.WithEms() // Check for TLS Extended Master Secret extension support.
 	s.WithCcs()
 	s.WithHeartbleed()
 	s.WithRenegotiation()
@@ -47,6 +47,7 @@ func TestSample(t *testing.T) {
 	s.WithEarlyData()
 	s.WithEllipticCurves()
 	s.WithMozillaConfig("intermediate")
+	s.WithQuiet() // Does not output anything to stdout; useful when using --json_out.
 
 	// Launch
 	s.Run()
