@@ -74,7 +74,7 @@ type Probing struct {
 	SupportedCipher            string `json:"cipher_suite_supported"`
 	ClientAuthRequirement      string `json:"client_auth_requirement"`
 	HighestTlsVersionSupported string `json:"highest_tls_version_supported"`
-	SupportedECDHKeyExchange   bool   `json:"supports_ecdh_key_exchange"`
+	SupportedEcdhKeyExchange   bool   `json:"supports_ecdh_key_exchange"`
 }
 
 // Command results
@@ -110,14 +110,17 @@ type CommandResults struct {
 			IsVulnerable string `json:"robot_result"`
 		} `json:"result"`
 	} `json:"robot"`
+
 	Renegotiation *struct {
 		StandardErrorStatus
 		Result *Renegotiation `json:"result"`
 	} `json:"session_renegotiation"`
+
 	Resumption *struct {
 		StandardErrorStatus
 		Result *Resumption `json:"result"`
 	} `json:"session_resumption"`
+
 	HttpHeaders *struct {
 		StandardErrorStatus
 		Result *HttpHeaders `json:"result"`
@@ -231,8 +234,8 @@ type Oid struct {
 }
 
 type SubjAltName struct {
-	Dns         []string `json:"dns_names"`
-	IPAddresses []string `json:"ip_addresses"`
+	DnsNames    []string `json:"dns_names"`
+	IpAddresses []string `json:"ip_addresses"`
 }
 
 // UnmarshalJSON for the SubjAltName struct.
@@ -249,14 +252,14 @@ func (s *SubjAltName) UnmarshalJSON(data []byte) error {
 	// Handle the ip addresses
 	rawIpData, ok := rawMap["ip_addresses"]
 	if !ok || rawIpData == nil || len(*rawIpData) == 0 {
-		s.IPAddresses = []string{} // Create empty list if ip_addresses field is missing, empty or nil
+		s.IpAddresses = []string{} // Create empty list if ip_addresses field is missing, empty or nil
 	} else {
 		var ip []string
 		errUnmar = json.Unmarshal(*rawIpData, &ip)
 		if errUnmar != nil {
 			return errUnmar
 		}
-		s.IPAddresses = ip
+		s.IpAddresses = ip
 	}
 
 	// Handle "dns_names" (or "dns") field
@@ -264,7 +267,7 @@ func (s *SubjAltName) UnmarshalJSON(data []byte) error {
 	if !ok {
 		rawDnsData, ok = rawMap["dns_names"]
 		if !ok || rawDnsData == nil || len(*rawDnsData) == 0 {
-			s.Dns = []string{} // Create empty list if "dns_names" / "dns" field is missing, empty or nil
+			s.DnsNames = []string{} // Create empty list if "dns_names" / "dns" field is missing, empty or nil
 		}
 	} else {
 		var dns []string
@@ -272,7 +275,7 @@ func (s *SubjAltName) UnmarshalJSON(data []byte) error {
 		if errUnmar != nil {
 			return errUnmar
 		}
-		s.Dns = dns
+		s.DnsNames = dns
 	}
 
 	return nil
@@ -318,14 +321,14 @@ type EllipticCurves struct {
 }
 
 type EllipticCurveResult struct {
-	RejectedCurves         []Curve `json:"rejected_curves"`
 	SupportedCurves        []Curve `json:"supported_curves"`
-	SupportECDHKeyExchange bool    `json:"supports_ecdh_key_exchange"`
+	RejectedCurves         []Curve `json:"rejected_curves"`
+	SupportEcdhKeyExchange bool    `json:"supports_ecdh_key_exchange"`
 }
 
 type Curve struct {
 	Name       string `json:"name"`
-	OpenSSLnid int    `json:"openssl_nid"`
+	OpenSslNid int    `json:"openssl_nid"`
 }
 
 // Cipher Suites
@@ -337,8 +340,8 @@ type Protocol struct {
 
 type CipherResult struct {
 	AcceptedCiphers   []AcceptedCipher `json:"accepted_cipher_suites"`
-	SupportTlsVersion bool             `json:"is_tls_version_supported"`
 	RejectedCiphers   []RejectedCipher `json:"rejected_cipher_suites"`
+	SupportTlsVersion bool             `json:"is_tls_version_supported"`
 	TlsVersion        string           `json:"tls_version_used"`
 }
 
@@ -368,13 +371,13 @@ type BaseKeyInfo struct {
 	PublicBytes []byte `json:"public_bytes"`
 }
 
-type EcDhKeyInfo struct {
+type EcdhKeyInfo struct {
 	BaseKeyInfo
 	CurveName string `json:"curve_name"`
 }
 
-type NistEcDhKeyInfo struct {
-	EcDhKeyInfo
+type NistEcdhKeyInfo struct {
+	EcdhKeyInfo
 	X []byte `json:"x"`
 	Y []byte `json:"y"`
 }
@@ -432,7 +435,7 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		return errUnmar
 	}
 
-	// Handle the the ephemeral key info
+	// Handle the ephemeral key info
 	rawKeyData, ok := rawMap["ephemeral_key"]
 	if !ok {
 		c.EphemeralKey = nil
@@ -459,9 +462,9 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	// EcDhKeyInfo
+	// EcdhKeyInfo
 	if fieldsMatch(rawKeyInfo, "type_name", "size", "public_bytes", "curve_name") {
-		ecdh := &EcDhKeyInfo{}
+		ecdh := &EcdhKeyInfo{}
 		errUnmar := json.Unmarshal(*rawKeyData, ecdh)
 		if errUnmar != nil {
 			return errUnmar
@@ -470,9 +473,9 @@ func (c *AcceptedCipher) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	// NistEcDhKeyInfo
+	// NistEcdhKeyInfo
 	if fieldsMatch(rawKeyInfo, "type_name", "size", "public_bytes", "curve_name", "x", "y") {
-		nist := &NistEcDhKeyInfo{}
+		nist := &NistEcdhKeyInfo{}
 		errUnmar := json.Unmarshal(*rawKeyData, nist)
 		if errUnmar != nil {
 			return errUnmar
@@ -508,12 +511,12 @@ type Renegotiation struct {
 }
 
 type Resumption struct {
-	AttemptedIdResumptions            int    `json:"session_id_attempted_resumptions_count"`
-	Result                            string `json:"session_id_resumption_result"`
-	SuccessfulIdResumptions           int    `json:"session_id_successful_resumptions_count"`
-	TicketAttemptedResumptionsCount   int    `json:"tls_ticket_attempted_resumptions_count"`
-	TicketResumption                  string `json:"tls_ticket_resumption_result"`
-	TicketSuccessfullResumptionsCount int    `json:"tls_ticket_successful_resumptions_count"`
+	AttemptedIdResumptions           int    `json:"session_id_attempted_resumptions_count"`
+	Result                           string `json:"session_id_resumption_result"`
+	SuccessfulIdResumptions          int    `json:"session_id_successful_resumptions_count"`
+	TicketAttemptedResumptionsCount  int    `json:"tls_ticket_attempted_resumptions_count"`
+	TicketResumption                 string `json:"tls_ticket_resumption_result"`
+	TicketSuccessfulResumptionsCount int    `json:"tls_ticket_successful_resumptions_count"`
 }
 
 type ResumptionRate struct {
@@ -524,11 +527,11 @@ type ResumptionRate struct {
 // Vulnerabilities & weaknesses
 
 type HttpHeaders struct {
-	ExpectedCt    *ExpectedCtHeader `json:"expect_ct_header"`
-	ErrorTrace    string            `json:"http_error_trace"`
-	PathRedircted string            `json:"http_path_redirected_to"`
-	RequestSent   string            `json:"http_request_sent"`
-	Hsts          *HstsHeader       `json:"strict_transport_security_header"`
+	ExpectedCt     *ExpectedCtHeader `json:"expect_ct_header"`
+	ErrorTrace     string            `json:"http_error_trace"`
+	PathRedirected string            `json:"http_path_redirected_to"`
+	RequestSent    string            `json:"http_request_sent"`
+	Hsts           *HstsHeader       `json:"strict_transport_security_header"`
 }
 
 type HstsHeader struct {
