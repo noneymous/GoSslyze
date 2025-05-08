@@ -134,7 +134,7 @@ func (s *Scanner) WithTarget(target string, port int) {
 	s.args = append(s.args, fmt.Sprintf("%s:%d", target, port))
 }
 
-// WithContext adds a context to the scanner, to make it cancellable and able to timeout.
+// WithContext adds a context to the scanner, to make it cancellable and able to time out.
 func (s *Scanner) WithContext(ctx context.Context) {
 	s.ctx = ctx
 }
@@ -157,6 +157,11 @@ func (s *Scanner) UpdateTrustStores() {
 // have a host and port per line with the format 'host:port'
 func (s *Scanner) WithTargetsFile(path string) {
 	s.args = append(s.args, fmt.Sprintf("--targets_in=%s", path))
+}
+
+// WithQuiet does not output anything to stdout; useful when using --json_out.
+func (s *Scanner) WithQuiet() {
+	s.args = append(s.args, "--quiet")
 }
 
 // WithSlowConnection reduces the number of concurrent connections. The scan will therefore be slower but more reliable
@@ -263,7 +268,7 @@ func (s *Scanner) WithCaFile(path string) {
 
 // WithClientCert sets the client certificate chain for authentication. The certificates must be in PEM format and must
 // be sorted starting with the subject's client certificate, followed by intermediate CA certificates if applicable.
-// Additionally the path of the client's private key file is set, as it is needed for client authentication as well.
+// Additionally, the path of the client's private key file is set, as it is needed for client authentication as well.
 func (s *Scanner) WithClientCert(chainPath string, keyPath string) {
 	s.args = append(s.args, fmt.Sprintf("--cert=%s", chainPath))
 	s.args = append(s.args, fmt.Sprintf("--key=%s", keyPath))
@@ -307,6 +312,11 @@ func (s *Scanner) WithTlsV1_2() {
 // WithTlsV1_3 list the tls 1.3 OpenSSL ciphers suites.
 func (s *Scanner) WithTlsV1_3() {
 	s.args = append(s.args, "--tlsv1_3")
+}
+
+// WithEms tests a server for TLS Extended Master Secret extension support.
+func (s *Scanner) WithEms() {
+	s.args = append(s.args, "--ems")
 }
 
 // Parse converts SSLyze json output to internal data structure

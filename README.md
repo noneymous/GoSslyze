@@ -33,6 +33,7 @@ func sample(){
 	s.WithTlsV1_1()
 	s.WithTlsV1_2()
 	s.WithTlsV1_3()
+	s.WithEms()            // Check for TLS Extended Master Secret extension support.
 	s.WithCcs()
 	s.WithHeartbleed()
 	s.WithRenegotiation()
@@ -46,6 +47,7 @@ func sample(){
 	s.WithEarlyData()
 	s.WithEllipticCurves()
 	s.WithMozillaConfig("intermediate")  // Specify the recommended Mozilla's config to be check against
+	s.WithQuiet()          // Does not output anything to stdout; useful when using --json_out.
 
 	// Launch
 	s.Run()
