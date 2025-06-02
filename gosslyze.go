@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+var ErrContextExpired = errors.New("SSLyze scan context expired")
+
 type Scanner struct {
 	ctx    context.Context // Context
 	path   string          // Binary path
@@ -83,7 +85,7 @@ func (s *Scanner) Run() (*HostResult, error) {
 		// Context was done before the scan was finished.
 		// The process is killed and a timeout error is returned.
 		_ = cmd.Process.Kill()
-		return nil, errors.New("SSLyze scan timed out")
+		return nil, ErrContextExpired
 	case <-done:
 
 		// Scan finished before timeout.
