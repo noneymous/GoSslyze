@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Outermost structures
+// HostResult defines the outermost structures
 type HostResult struct {
 	InvalidTargets        []ConnectivityError `json:"invalid_server_strings"`
 	Targets               []Target            `json:"server_scan_results"`
@@ -21,7 +21,7 @@ type HostResult struct {
 	ComplianceTestDetails string              // Details of Mozilla's recommended config check
 }
 
-// Server errors
+// ConnectivityError contains server errors
 type ConnectivityError struct {
 	Server string `json:"server_string"`
 	Error  string `json:"error_message"`

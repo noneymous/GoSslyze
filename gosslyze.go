@@ -100,23 +100,46 @@ func (s *Scanner) Run() (*HostResult, error) {
 			// Read stderr buffer
 			var stderrStr = strings.Trim(stderr.String(), " \t\n")
 
-			// Ignore UserWarning and CryptographyDeprecationWarning warnings in errors
+			// Check for real errors, ignore UserWarning and CryptographyDeprecationWarning warnings in errors
 			var errs []string
+			var warn = false
 			for _, line := range strings.Split(stderrStr, "\n") {
-				l := strings.ReplaceAll(line, " ", "")
-				l = strings.ReplaceAll(l, "\n", "")
-				l = strings.ReplaceAll(l, "\t", "")
-				if l != "" && // Ignore empty lines
-					!strings.Contains(l, "UserWarning:") && // Ignore user warnings
-					!strings.Contains(l, "CryptographyDeprecationWarning:") && // Ignore deprecation warnings
-					!strings.HasPrefix(l, "  ") { // Ignore indented lines as they belong to the previous message
-					errs = append(errs, strings.Trim(line, " .\n\t"))
+
+				// Replace tabs with spaces
+				l := strings.ReplaceAll(line, "\t", " ")
+
+				// Skip empty lines
+				if strings.ReplaceAll(l, " ", "") == "" {
+					continue
 				}
+
+				// Skip user warnings
+				if strings.Contains(l, " UserWarning:") {
+					warn = true
+					continue
+				}
+
+				// Skip deprecation warnings
+				if strings.Contains(l, " CryptographyDeprecationWarning:") {
+					warn = true
+					continue
+				}
+
+				// Skip indented lines if they belong to a warning
+				if warn && strings.HasPrefix(l, "  ") {
+					continue
+				}
+
+				// Reset warning indicator flag
+				warn = false
+
+				// Append original line to errors
+				errs = append(errs, strings.Trim(line, " .\n\t"))
 			}
 
 			// Return stderr output if errors were contained
 			if len(errs) > 0 {
-				return nil, errors.New(stderrStr) // Nevertheless return whole stderr out for better debuggability
+				return nil, errors.New(strings.Join(errs, "\n")) // Nevertheless return whole stderr out for better debuggability
 			}
 		}
 
