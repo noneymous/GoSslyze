@@ -127,6 +127,12 @@ func (s *Scanner) Run() (*HostResult, error) {
 					continue
 				}
 
+				// Skip unexpected value warnings
+				if strings.Contains(l, " Unexpected value ") { // Not an error, just a warning according to sslyze/plugins/http_headers_plugin.py
+					warn = true
+					continue
+				}
+
 				// Skip indented lines if they belong to a warning
 				if warn && strings.HasPrefix(l, "  ") {
 					continue
