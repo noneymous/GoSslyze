@@ -128,7 +128,7 @@ func (s *Scanner) Run() (*HostResult, error) {
 				}
 
 				// Skip unexpected value warnings
-				if strings.Contains(l, " Unexpected value ") { // Not an error, just a warning according to sslyze/plugins/http_headers_plugin.py
+				if strings.Contains(l, "Unexpected value ") { // Not an error, just a warning according to sslyze/plugins/http_headers_plugin.py
 					warn = true
 					continue
 				}
