@@ -59,6 +59,10 @@ func (s *Scanner) Run() (*HostResult, error) {
 	// Prepare the command
 	cmd := exec.Command(s.path, s.args...)
 
+	// Force UTF-8 I/O to prevent UnicodeEncodeError on Windows agents with cp1252 as default code page.
+	// SSLyze (cx_Freeze frozen) may encounter non-cp1252 characters in certificate data and crash without this.
+	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8", "PYTHONUTF8=1")
+
 	// Set output and error buffer
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
