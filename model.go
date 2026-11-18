@@ -52,7 +52,7 @@ type NetworkConfig struct {
 type ClientAuthCredentials struct {
 	CertificateChainPath string `json:"certificate_chain_path"`
 	KeyPath              string `json:"key_path"`
-	KeyType              int    `json:"key_type"`
+	KeyType              string `json:"key_type"`
 }
 
 type ServerLocation struct {
@@ -125,7 +125,7 @@ type CommandResults struct {
 		StandardErrorStatus
 		Result *HttpHeaders `json:"result"`
 	} `json:"http_headers"`
-	TlsEms *struct { // Check introduced in Sslyze 6.1.0
+	TlsEms *struct {
 		StandardErrorStatus
 		Result *TlsEms `json:"result"`
 	} `json:"tls_extended_master_secret"`
@@ -171,6 +171,9 @@ type CertInfo struct {
 type CertInfoResult struct {
 	Deployments  []Deployment `json:"certificate_deployments"`
 	HostnameUsed string       `json:"hostname_used_for_server_name_indication"`
+
+	// Certificate retrieved without Server Name Indication, nil if the server did not return one
+	DeploymentSniDisabled *Deployment `json:"certificate_deployment_with_sni_disabled"`
 }
 
 type Deployment struct {
@@ -186,20 +189,13 @@ type Deployment struct {
 	VerifiedCertChain *[]Certificate   `json:"verified_certificate_chain"`
 	SymantecDistrust  bool             `json:"verified_chain_has_legacy_symantec_anchor"`
 	HasSha1           bool             `json:"verified_chain_has_sha1_signature"`
-
-	// Deprecated fields
-	// Removed in Sslyze 6.0.0, instead look for "no matching subjectAltName" in validation_error
-	MatchHostname bool `json:"leaf_certificate_subject_matches_hostname"`
 }
 
 type PathValidation struct {
-	ValidationError      string         `json:"validation_error"` // Previously named "openssl_error_string" in Sslyze < 6.0.0
+	ValidationError      string         `json:"validation_error"`
 	TrustStore           TrustStore     `json:"trust_store"`
 	VerifiedChain        *[]Certificate `json:"verified_certificate_chain"`
 	ValidationSuccessful bool           `json:"was_validation_successful"`
-
-	// Deprecated fields
-	OpenSslError string `json:"openssl_error_string"` // Renamed to "validation_error" in Sslyze > 6.0.0
 }
 
 type Certificate struct {
@@ -246,49 +242,6 @@ type SubjAltName struct {
 	IpAddresses []string `json:"ip_addresses"`
 }
 
-// UnmarshalJSON for the SubjAltName struct.
-// Necessary because in older versions the "dns_names" is called "dns" and the "ip_addresses" is missing
-func (s *SubjAltName) UnmarshalJSON(data []byte) error {
-
-	// First, deserialize everything into a map of map
-	var rawMap map[string]*json.RawMessage
-	errUnmar := json.Unmarshal(data, &rawMap)
-	if errUnmar != nil {
-		return errUnmar
-	}
-
-	// Handle the ip addresses
-	rawIpData, ok := rawMap["ip_addresses"]
-	if !ok || rawIpData == nil || len(*rawIpData) == 0 {
-		s.IpAddresses = []string{} // Create empty list if ip_addresses field is missing, empty or nil
-	} else {
-		var ip []string
-		errUnmar = json.Unmarshal(*rawIpData, &ip)
-		if errUnmar != nil {
-			return errUnmar
-		}
-		s.IpAddresses = ip
-	}
-
-	// Handle "dns_names" (or "dns") field
-	rawDnsData, ok := rawMap["dns"]
-	if !ok {
-		rawDnsData, ok = rawMap["dns_names"]
-		if !ok || rawDnsData == nil || len(*rawDnsData) == 0 {
-			s.DnsNames = []string{} // Create empty list if "dns_names" / "dns" field is missing, empty or nil
-		}
-	} else {
-		var dns []string
-		errUnmar = json.Unmarshal(*rawDnsData, &dns)
-		if errUnmar != nil {
-			return errUnmar
-		}
-		s.DnsNames = dns
-	}
-
-	return nil
-}
-
 type PublicKey struct {
 	Algorithm      string  `json:"algorithm"`
 	Curve          string  `json:"ec_curve_name"`
@@ -307,17 +260,12 @@ type TrustStore struct {
 }
 
 type OscpResponse struct {
-	Status            string  `json:"status"`
-	Type              string  `json:"type"`
-	Version           int     `json:"version"`
-	ResponderId       string  `json:"responder_id"`
-	ProducedAt        UtcTime `json:"produced_at"`
+	ResponseStatus    string  `json:"response_status"`
 	CertificateStatus string  `json:"certificate_status"`
+	RevocationTime    UtcTime `json:"revocation_time"` // Zero value if the certificate is not revoked
+	ProducedAt        UtcTime `json:"produced_at"`
 	ThisUpdate        UtcTime `json:"this_update"`
 	NextUpdate        UtcTime `json:"next_update"`
-	HashAlgorithm     string  `json:"hash_algorithm"`
-	IssuerNameHash    string  `json:"issuer_name_hash"`
-	IssuerKeyHash     string  `json:"issuer_key_hash"`
 	SerialNumber      big.Int `json:"serial_number"`
 }
 
@@ -535,23 +483,16 @@ type ResumptionRate struct {
 // Vulnerabilities & weaknesses
 
 type HttpHeaders struct {
-	ExpectedCt     *ExpectedCtHeader `json:"expect_ct_header"`
-	ErrorTrace     string            `json:"http_error_trace"`
-	PathRedirected string            `json:"http_path_redirected_to"`
-	RequestSent    string            `json:"http_request_sent"`
-	Hsts           *HstsHeader       `json:"strict_transport_security_header"`
+	ErrorTrace     string      `json:"http_error_trace"`
+	PathRedirected string      `json:"http_path_redirected_to"`
+	RequestSent    string      `json:"http_request_sent"`
+	Hsts           *HstsHeader `json:"strict_transport_security_header"`
 }
 
 type HstsHeader struct {
 	Preload           bool `json:"preload"`
 	IncludeSubdomains bool `json:"include_subdomains"`
 	MaxAge            int  `json:"max_age"`
-}
-
-type ExpectedCtHeader struct {
-	Enforce   bool   `json:"enforce"`
-	MaxAge    int    `json:"max_age"`
-	ReportUri string `json:"report_uri"`
 }
 
 type TlsEms struct {
@@ -606,30 +547,4 @@ func (ut *UtcTime) UnmarshalJSON(data []byte) error {
 func (ut *UtcTime) MarshalJSON() ([]byte, error) {
 	stamp := fmt.Sprintf("\"%s\"", ut.Time.Format(timeFormats[0]))
 	return []byte(stamp), nil
-}
-
-// UnmarshalJSON for the PathValidation struct.
-// Necessary because openssl_error_string was renamed to validation_error in sslyze > 6.0.0
-func (p *PathValidation) UnmarshalJSON(data []byte) error {
-
-	// Prepare temporary auxiliary data structure to load raw Json data
-	type aux PathValidation
-	var raw aux
-
-	// Unmarshal serialized Json into temporary auxiliary structure
-	err := json.Unmarshal(data, &raw)
-	if err != nil {
-		return err
-	}
-
-	// Copy loaded Json values to actual
-	*p = PathValidation(raw)
-
-	// Handle the validation error field
-	if raw.OpenSslError != "" {
-		p.ValidationError = raw.OpenSslError
-	}
-
-	// Return nil as everything went fine
-	return nil
 }

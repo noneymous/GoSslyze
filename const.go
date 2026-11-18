@@ -1,5 +1,8 @@
 package gosslyze
 
+// SupportedSslyzeVersion is the major and minor version of SSLyze, whose output this wrapper can parse.
+const SupportedSslyzeVersion = "6.3"
+
 // Constants to compare enums and strings against
 
 const (
@@ -59,6 +62,11 @@ const (
 	EphemeralKeyCurveTypeSecp224K1 = 712
 	EphemeralKeyCurveTypeSecp224R1 = 713
 	EphemeralKeyCurveTypeSecp256K1 = 714
+
+	// RFC7027
+	EphemeralKeyCurveTypeBrainpoolP256R1 = 927
+	EphemeralKeyCurveTypeBrainpoolP384R1 = 931
+	EphemeralKeyCurveTypeBrainpoolP512R1 = 933
 
 	// RFC8422 (current)
 	EphemeralKeyCurveTypeSecp192R1  = 409

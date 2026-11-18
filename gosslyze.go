@@ -181,6 +181,13 @@ func (s *Scanner) WithMozillaConfig(config string) {
 	s.args = append(s.args, fmt.Sprintf("--mozilla_config=%s", config))
 }
 
+// WithCustomTlsConfig adds a check for the server's TLS configuration against a custom configuration, instead of one of
+// Mozilla's. The path must point to a JSON file following Mozilla's format. Cannot be combined with
+// WithMozillaConfig.
+func (s *Scanner) WithCustomTlsConfig(path string) {
+	s.args = append(s.args, fmt.Sprintf("--custom_tls_config=%s", path))
+}
+
 // UpdateTrustStores updates the default trust stores used by SSLyze. The latest stores will be downloaded from
 // https://github.com/nabla-c0d3/trust_stores_observatory. This option is meant to be used
 // separately, and will silence any other command line option supplied to SSLyze.
@@ -361,8 +368,8 @@ func Parse(jsonOut []byte, stdOut string) (*HostResult, error) {
 	// Try to parse the output data to internal structure
 	errUnmarshal := json.Unmarshal(jsonOut, result)
 
-	// Parse Mozilla's config check, this behavior can be removed once the check's results are recorded in the JSON output
-	startIdx := strings.Index(stdOut, "COMPLIANCE AGAINST MOZILLA TLS CONFIGURATION")
+	// Parse the TLS config check, this behavior can be removed once the check's results are recorded in the JSON output.
+	startIdx := strings.Index(stdOut, "COMPLIANCE AGAINST TLS CONFIGURATION")
 	if startIdx != -1 {
 		checkResult := stdOut[startIdx:]
 		result.ComplianceTestDetails = checkResult
@@ -378,6 +385,12 @@ func Parse(jsonOut []byte, stdOut string) (*HostResult, error) {
 	if errUnmarshal != nil {
 		fmt.Println(errUnmarshal)
 		return nil, errUnmarshal
+	}
+
+	// Refuse output of SSLyze versions this wrapper's data model was not built for
+	errVersion := verifyVersion(result.Version)
+	if errVersion != nil {
+		return nil, errVersion
 	}
 	return result, nil
 }
